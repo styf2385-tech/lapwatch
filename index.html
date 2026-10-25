@@ -147,8 +147,18 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
 .acts .hbtn{flex:1;min-width:8em;padding:12px}
 .acts .hbtn.warn{background:var(--track);color:var(--track-ink);border-color:var(--track)}
 .hist{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.hist button{display:grid;grid-template-columns:1fr auto;gap:2px 12px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:12px;color:var(--ink);cursor:pointer}
-.hist button:first-child{border-top:0}
+.hrow{display:flex;border-top:1px solid var(--line)}
+.hrow:first-child{border-top:0}
+.hrow .open{flex:1;min-width:0;display:grid;grid-template-columns:1fr auto;gap:2px 12px;text-align:left;background:none;border:0;padding:12px;color:var(--ink);cursor:pointer}
+.hrow .del{background:none;border:0;border-left:1px solid var(--line);color:var(--muted);padding:0 12px;font-size:12px;cursor:pointer;min-width:5.2em;line-height:1.4}
+.hrow .del.warn{background:var(--track);color:var(--track-ink)}
+.preview{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;place-items:center;min-width:0;
+  background-color:var(--surface);background-image:conic-gradient(var(--line) 0 25%,transparent 0 50%,var(--line) 0 75%,transparent 0);background-size:20px 20px}
+.preview canvas{max-width:100%;max-height:56vh;width:auto;height:auto;min-width:0;display:block;border-radius:6px}
+.sheet-in>*{min-width:0}
+.opts{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px}
+.note{font-size:12px;color:var(--muted);line-height:1.7;margin:0}
+.acts .hbtn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .hist .hd{font-size:12px;color:var(--muted)}
 .hist .hv{font:700 22px var(--f-num);font-variant-numeric:tabular-nums}
 .hist .hs{font-size:12px;color:var(--muted);text-align:right;align-self:end}
@@ -218,7 +228,8 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
     </div>
     <div class="tbl" id="rKm"></div>
     <div class="tbl" id="rLaps"></div>
-    <div class="acts"><button class="hbtn" id="rCopy">記録をコピー</button><button class="hbtn" id="rDel">この記録を削除</button></div>
+    <div class="acts"><button class="hbtn primary" id="rShare">シェア画像を作る</button><button class="hbtn" id="rCopy">記録をコピー</button></div>
+    <div class="acts"><button class="hbtn" id="rGpx">GPXで書き出す</button><button class="hbtn" id="rDel">この記録を削除</button></div>
   </div>
 </section>
 
@@ -226,6 +237,27 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
   <div class="sheet-in">
     <div class="sheet-head"><h2>履歴<span class="sub">　この端末に最大30件</span></h2><button class="hbtn" data-close="history">閉じる</button></div>
     <div class="hist" id="histList"></div>
+    <div class="acts"><button class="hbtn" id="hExport">全履歴を書き出す</button><button class="hbtn" id="hImport">ファイルから読み込む</button></div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <p class="note">履歴のバックアップや、別の端末へ移すときに使います。書き出したファイルを「ファイル」アプリに保存しておき、「ファイルから読み込む」で履歴に戻せます（同じ記録は重複しません）。</p>
+  </div>
+</section>
+
+<section class="sheet" id="share" hidden aria-label="シェア画像">
+  <div class="sheet-in">
+    <div class="sheet-head"><h2>シェア画像</h2><button class="hbtn" data-close="share">閉じる</button></div>
+    <div class="preview"><canvas id="shareCanvas" width="1080" height="1080"></canvas></div>
+    <div class="acts"><button class="hbtn primary" id="sShare">共有・保存</button><button class="hbtn" id="sCopy">画像をコピー</button></div>
+    <div class="opts">
+      <div class="row" data-opt="style"><span>スタイル</span><button class="chip" data-v="sticker">透過ステッカー</button><button class="chip" data-v="photo">写真に重ねる</button><button class="chip" data-v="card">カード</button></div>
+      <div class="row" id="optPhoto"><span>写真</span><button class="chip" id="pickPhoto">写真を選ぶ</button><input type="file" id="photoFile" accept="image/*" hidden></div>
+      <div class="row" data-opt="ratio" id="optRatio"><span>サイズ</span><button class="chip" data-v="story">ストーリーズ</button><button class="chip" data-v="feed">投稿 4:5</button></div>
+      <div class="row" data-opt="ink" id="optInk"><span>文字色</span><button class="chip" data-v="light">白</button><button class="chip" data-v="dark">黒</button></div>
+      <div class="row" data-opt="dsrc" id="optDsrc"><span>距離</span><button class="chip" data-v="lap" id="dsLap">ラップ設定</button><button class="chip" data-v="gps" id="dsGps">GPS</button></div>
+      <div class="row" data-opt="route"><span>ルート</span><button class="chip" data-v="on">表示</button><button class="chip" data-v="off">なし</button></div>
+      <div class="row" data-opt="trim"><span>位置の保護</span><button class="chip" data-v="on">スタート・ゴール付近を隠す</button><button class="chip" data-v="off">隠さない</button></div>
+    </div>
+    <p class="note">地図・航空写真・地名は画像に入りません。「位置の保護」をオンにすると、ルートの最初と最後の200mを描きません。「画像をコピー」してInstagramのストーリーズ作成画面に貼り付けると、写真の上に自由に置けるステッカーになります（透過ステッカーがおすすめ）。</p>
   </div>
 </section>
 
@@ -499,15 +531,150 @@ $('rDel').addEventListener('click',()=>{if(!curRun)return;
   saveRuns(loadRuns().filter(r=>r.id!==curRun.id));closeSheet('result');toast('記録を削除しました');openHistory();});
 
 /* history */
-function openHistory(){
+let hDel=null,hDelAt=0;
+function renderHistory(){
   const runs=loadRuns();
-  $('histList').innerHTML=runs.length?runs.map(r=>`<button data-run="${r.id}"><span class="hd">${fmtDate(r.date)}　${r.laps.length}周</span><span></span>`+
-    `<span class="hv">${fmtClock(r.ms)}</span><span class="hs">${r.gdist>0?fmtKm(r.gdist)+'km · '+fmtPace(r.ms/r.gdist*1000)+'/km':'GPSなし'}</span></button>`).join('')
+  $('histList').innerHTML=runs.length?runs.map(r=>{const armed=hDel===String(r.id)&&Date.now()-hDelAt<3000;
+    return `<div class="hrow"><button class="open" data-run="${r.id}"><span class="hd">${fmtDate(r.date)}　${r.laps.length}周</span><span></span>`+
+    `<span class="hv">${fmtClock(r.ms)}</span><span class="hs">${r.gdist>0?fmtKm(r.gdist)+'km · '+fmtPace(r.ms/r.gdist*1000)+'/km':'GPSなし'}</span></button>`+
+    `<button class="del${armed?' warn':''}" data-del="${r.id}">${armed?'もう一度<br>押して削除':'削除'}</button></div>`;}).join('')
     :'<div class="nomap">まだ記録がありません。ゴールを押すと、ここに保存されます。</div>';
-  openSheet('history');
 }
-$('histList').addEventListener('click',e=>{const b=e.target.closest('[data-run]');if(!b)return;const r=loadRuns().find(x=>String(x.id)===b.dataset.run);if(r)openResult(r);});
+function openHistory(){hDel=null;renderHistory();openSheet('history');}
+$('histList').addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]');
+  if(d){const id=d.dataset.del;
+    if(hDel===id&&Date.now()-hDelAt<3000){saveRuns(loadRuns().filter(r=>String(r.id)!==id));hDel=null;toast('記録を削除しました');}
+    else{hDel=id;hDelAt=Date.now();setTimeout(()=>{if(hDel===id&&Date.now()-hDelAt>=3000){hDel=null;renderHistory();}},3050);}
+    renderHistory();return;}
+  const b=e.target.closest('[data-run]');if(!b)return;const r=loadRuns().find(x=>String(x.id)===b.dataset.run);if(r)openResult(r);});
 $('histBtn').addEventListener('click',openHistory);
+
+/* files: share sheet when available, download otherwise */
+function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),15000);}
+function shareFile(blob,name,type){
+  let file=null;try{file=new File([blob],name,{type});}catch(e){}
+  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file]}).catch(err=>{if(!err||err.name!=='AbortError')downloadBlob(blob,name);});}
+  else downloadBlob(blob,name);
+}
+function ymd(ts){const d=new Date(ts);return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate());}
+$('hExport').addEventListener('click',()=>{const runs=loadRuns();if(!runs.length){toast('書き出す記録がありません');return;}
+  shareFile(new Blob([JSON.stringify({app:'lapwatch',version:1,exported:Date.now(),runs})],{type:'application/json'}),`lapwatch-backup-${ymd(Date.now())}.json`,'application/json');});
+$('hImport').addEventListener('click',()=>$('importFile').click());
+$('importFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  f.text().then(txt=>{let d;try{d=JSON.parse(txt);}catch(err){toast('ファイルを読み込めませんでした');return;}
+    const inc=(Array.isArray(d)?d:d&&d.runs)||[];
+    const ok=inc.filter(r=>r&&r.id!=null&&Array.isArray(r.laps)&&typeof r.ms==='number'&&typeof r.date==='number')
+      .map(r=>({id:r.id,date:r.date,ms:r.ms,laps:r.laps,lapDist:r.lapDist||400,firstDist:r.firstDist||0,gdist:r.gdist||0,pts:Array.isArray(r.pts)?r.pts:[]}));
+    if(!ok.length){toast('このファイルには読み込める記録がありません');return;}
+    const runs=loadRuns(),have=new Set(runs.map(r=>String(r.id)));let n=0;
+    ok.forEach(r=>{if(!have.has(String(r.id))){runs.push(r);n++;}});
+    runs.sort((a,b)=>b.date-a.date);if(runs.length>MAXRUNS)runs.length=MAXRUNS;
+    saveRuns(runs);renderHistory();toast(n?`${n}件の記録を読み込みました`:'新しい記録はありませんでした');
+  });});
+
+/* GPX export */
+function gpxText(run){
+  const segs=[];let cur=null;
+  (run.pts||[]).forEach(p=>{if(!cur||cur.seg!==p[3]){cur={seg:p[3],pts:[]};segs.push(cur);}cur.pts.push(p);});
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="LapWatch" xmlns="http://www.topografix.com/GPX/1/1">\n'+
+    `<metadata><time>${new Date(run.date).toISOString()}</time></metadata>\n<trk><name>Run ${fmtDate(run.date)}</name><type>running</type>\n`+
+    segs.map(s=>'<trkseg>\n'+s.pts.map(p=>`<trkpt lat="${p[1]}" lon="${p[2]}"><time>${new Date(run.date+p[0]).toISOString()}</time></trkpt>`).join('\n')+'\n</trkseg>').join('\n')+
+    '\n</trk>\n</gpx>\n';
+}
+$('rGpx').addEventListener('click',()=>{if(!curRun)return;if(!curRun.pts||curRun.pts.length<2){toast('GPSの記録がないため書き出せません');return;}
+  shareFile(new Blob([gpxText(curRun)],{type:'application/gpx+xml'}),`run-${ymd(curRun.date)}.gpx`,'application/gpx+xml');});
+
+/* share image */
+const SH={style:'sticker',ratio:'story',ink:'light',dsrc:'lap',route:'on',trim:'on'};
+try{Object.assign(SH,JSON.parse(localStorage.getItem('lapwatch.share'))||{});}catch(e){}
+let shareRun=null,shareBlob=null,shareSeq=0,sharePhoto=null,fontsP=null;
+function fontsReady(){if(!document.fonts)return Promise.resolve();
+  return fontsP||(fontsP=Promise.all(['700 100px "Barlow Condensed"','600 40px "Barlow Condensed"'].map(f=>document.fonts.load(f))).catch(()=>{}));}
+function lapSum(run){return run.laps.reduce((a,l)=>a+l.dist,0);}
+function shareVals(run){
+  const ls=lapSum(run),useGps=SH.dsrc==='gps'?run.gdist>0:!ls,dist=useGps?run.gdist:ls;
+  const s=Math.floor(run.ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;
+  const d=new Date(run.date),wd=['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+  return {date:`${d.getFullYear()}.${pad2(d.getMonth()+1)}.${pad2(d.getDate())}  ${wd}`,
+    dist:dist>0?fmtKm(dist):'--',time:h?`${h}:${pad2(m)}:${pad2(ss)}`:`${m}:${pad2(ss)}`,pace:dist>0?fmtPace(run.ms/dist*1000):'--:--'};
+}
+function routeXY(run){
+  const pts=run.pts||[];if(pts.length<2)return null;
+  const lat0=pts[0][1],lng0=pts[0][2],mLat=111320,mLng=111320*Math.cos(lat0*Math.PI/180);
+  const cd=[0];for(let i=1;i<pts.length;i++)cd[i]=cd[i-1]+(pts[i][3]===pts[i-1][3]?hav(pts[i-1][1],pts[i-1][2],pts[i][1],pts[i][2]):0);
+  const total=cd[cd.length-1],cut=SH.trim==='on'?Math.min(200,total*.15):0;
+  const raw=[];pts.forEach((p,i)=>{if(cd[i]>=cut&&cd[i]<=total-cut)raw.push({x:(p[2]-lng0)*mLng,y:-(p[1]-lat0)*mLat,seg:p[3]});});
+  const out=raw.map((p,i)=>{let sx=0,sy=0,n=0;for(let j=i-2;j<=i+2;j++){const q=raw[j];if(q&&q.seg===p.seg){sx+=q.x;sy+=q.y;n++;}}return {x:sx/n,y:sy/n,seg:p.seg};});
+  return out.length>=2?out:null;
+}
+function drawRoute(c,r,box,color,lw){
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;r.forEach(p=>{x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);});
+  const k=Math.min(box.w/Math.max(x1-x0,1),box.h/Math.max(y1-y0,1)),ox=box.x+(box.w-(x1-x0)*k)/2,oy=box.y+(box.h-(y1-y0)*k)/2;
+  c.save();c.strokeStyle=color;c.lineWidth=lw;c.lineJoin='round';c.lineCap='round';c.beginPath();
+  r.forEach((p,i)=>{const X=ox+(p.x-x0)*k,Y=oy+(p.y-y0)*k;if(i===0||p.seg!==r[i-1].seg)c.moveTo(X,Y);else c.lineTo(X,Y);});
+  c.stroke();c.restore();
+}
+function drawStats(c,top,W,col,v,big){
+  const F='"Barlow Condensed","Arial Narrow",sans-serif',cols=[['DISTANCE',v.dist,'km'],['TIME',v.time,''],['PACE',v.pace,'/km']];
+  const cw=(W-120)/3;c.save();c.fillStyle=col;c.textBaseline='alphabetic';c.textAlign='center';
+  c.font=`600 ${big?44:38}px ${F}`;c.fillText(v.date,W/2,top+44);
+  cols.forEach(([lab,val,unit],i)=>{const cx=60+cw*i+cw/2;
+    c.globalAlpha=.85;c.font=`600 30px ${F}`;c.fillText(lab.split('').join(String.fromCharCode(8202)),cx,top+120);c.globalAlpha=1;
+    let fs=big?124:112;c.font=`700 ${fs}px ${F}`;const uf=`600 ${Math.round(fs*.34)}px ${F}`;
+    const meas=()=>{c.font=`700 ${fs}px ${F}`;const a=c.measureText(val).width;c.font=`600 ${Math.round(fs*.34)}px ${F}`;return a+(unit?c.measureText(unit).width+8:0);};
+    while(meas()>cw-16&&fs>50)fs-=4;
+    const wv=(c.font=`700 ${fs}px ${F}`,c.measureText(val).width),wu=unit?(c.font=`600 ${Math.round(fs*.34)}px ${F}`,c.measureText(unit).width+8):0,sx=cx-(wv+wu)/2;
+    c.textAlign='left';c.font=`700 ${fs}px ${F}`;c.fillText(val,sx,top+120+fs*.95);
+    if(unit){c.font=`600 ${Math.round(fs*.34)}px ${F}`;c.fillText(unit,sx+wv+8,top+120+fs*.95);}c.textAlign='center';});
+  c.restore();
+}
+async function renderShare(){
+  const seq=++shareSeq;shareBlob=null;await fontsReady();if(seq!==shareSeq||!shareRun)return;
+  const run=shareRun,v=shareVals(run),cv=$('shareCanvas'),c=cv.getContext('2d'),W=1080,route=SH.route==='on'?routeXY(run):null;
+  if(SH.style==='sticker'){
+    const H=route?1060:340;cv.width=W;cv.height=H;c.clearRect(0,0,W,H);
+    const col=SH.ink==='light'?'#FFFFFF':'#141212';c.shadowColor=SH.ink==='light'?'rgba(0,0,0,.35)':'rgba(255,255,255,.35)';c.shadowBlur=10;
+    if(route)drawRoute(c,route,{x:170,y:30,w:740,h:620},col,12);
+    drawStats(c,route?690:20,W,col,v,false);
+  }else{
+    const H=SH.ratio==='story'?1920:1350;cv.width=W;cv.height=H;
+    const sy=SH.ratio==='story'?{date:250,rt:[380,H-1000],st:H-620}:{date:90,rt:[120,H-600],st:H-430};
+    if(SH.style==='photo'&&sharePhoto){const iw=sharePhoto.naturalWidth,ih=sharePhoto.naturalHeight,k=Math.max(W/iw,H/ih);
+      c.drawImage(sharePhoto,(W-iw*k)/2,(H-ih*k)/2,iw*k,ih*k);
+      let g=c.createLinearGradient(0,sy.st-260,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.72)');c.fillStyle=g;c.fillRect(0,sy.st-260,W,H);
+    }else{
+      const g=c.createLinearGradient(0,0,0,H);
+      if(SH.style==='card'){g.addColorStop(0,'#1E1A19');g.addColorStop(1,'#0F0D0D');}else{g.addColorStop(0,'#4A4240');g.addColorStop(1,'#2A2524');}
+      c.fillStyle=g;c.fillRect(0,0,W,H);
+      if(SH.style==='photo'){c.fillStyle='rgba(255,255,255,.55)';c.font='500 40px "Zen Kaku Gothic New",sans-serif';c.textAlign='center';c.fillText('下の「写真を選ぶ」から写真を選んでください',W/2,H*.32);}
+    }
+    if(route)drawRoute(c,route,{x:140,y:sy.rt[0]+(SH.ratio==='story'?200:60),w:800,h:sy.rt[1]-sy.rt[0]-(SH.ratio==='story'?200:60)},SH.style==='card'?'#FF6B3D':'#FFFFFF',12);
+    c.shadowColor='rgba(0,0,0,.3)';c.shadowBlur=SH.style==='photo'?10:0;
+    drawStats(c,sy.st,W,'#FFFFFF',v,true);c.shadowBlur=0;
+  }
+  cv.toBlob(b=>{if(seq===shareSeq)shareBlob=b;},'image/png');
+}
+function renderShareUI(){
+  document.querySelectorAll('#share [data-opt]').forEach(row=>row.querySelectorAll('[data-v]').forEach(ch=>ch.setAttribute('aria-pressed',SH[row.dataset.opt]===ch.dataset.v)));
+  const ls=lapSum(shareRun),both=ls>0&&shareRun.gdist>0;
+  $('optRatio').hidden=SH.style==='sticker';$('optInk').hidden=SH.style!=='sticker';$('optPhoto').hidden=SH.style!=='photo';$('optDsrc').hidden=!both;
+  $('dsLap').textContent='ラップ設定 '+fmtKm(ls)+'km';$('dsGps').textContent='GPS '+fmtKm(shareRun.gdist||0)+'km';
+  $('pickPhoto').textContent=sharePhoto?'写真を変える':'写真を選ぶ';
+  renderShare();
+}
+function openShare(run){shareRun=run;openSheet('share');renderShareUI();}
+$('share').addEventListener('click',e=>{const ch=e.target.closest('[data-v]'),row=ch&&ch.closest('[data-opt]');if(!row)return;
+  SH[row.dataset.opt]=ch.dataset.v;try{localStorage.setItem('lapwatch.share',JSON.stringify(SH));}catch(err){}renderShareUI();});
+$('pickPhoto').addEventListener('click',()=>$('photoFile').click());
+$('photoFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const img=new Image();
+  img.onload=()=>{sharePhoto=img;renderShareUI();};img.onerror=()=>toast('この写真は読み込めませんでした');img.src=URL.createObjectURL(f);});
+$('rShare').addEventListener('click',()=>curRun&&openShare(curRun));
+$('sShare').addEventListener('click',()=>{if(!shareBlob){toast('画像を準備中です。少し待ってからもう一度押してください');return;}
+  shareFile(shareBlob,`run-${ymd(shareRun.date)}.png`,'image/png');});
+$('sCopy').addEventListener('click',()=>{
+  if(!shareBlob||!window.ClipboardItem||!navigator.clipboard||!navigator.clipboard.write){toast('この端末では画像をコピーできません。「共有・保存」を使ってください');return;}
+  navigator.clipboard.write([new ClipboardItem({'image/png':shareBlob})]).then(()=>toast('画像をコピーしました'),()=>toast('コピーできませんでした。「共有・保存」を使ってください'));});
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeSheet(b.dataset.close)));
 
 /* input: act on touch-down for timing accuracy */
