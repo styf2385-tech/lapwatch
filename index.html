@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>長距離ラップウォッチ</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ラップ">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F1EFEF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131111" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+/* Layout: one-screen instrument. Clock + GPS distance on top, pace projections, lap log scrolls, oversized thumb buttons at the bottom. Result & history open as full-screen sheets. */
+:root{
+  --bg:#F1EFEF; --surface:#FFFFFF; --ink:#1C1919; --muted:#6F6766; --line:#DDD6D5;
+  --track:#B5432C; --track-ink:#FFFFFF; --go:#1E7650; --go-ink:#FFFFFF; --goal:#1C1919; --goal-ink:#FFFFFF;
+  --hi:#F8E3DE; --ok:#1E7650; --warn:#B07A12; --bad:#B5432C;
+  --f-num:"Barlow Condensed","DIN Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-jp:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131111; --surface:#1D1A1A; --ink:#F2EDEC; --muted:#9D9492; --line:#322C2B;
+  --track:#D05A40; --track-ink:#FFFFFF; --go:#2C9A66; --go-ink:#FFFFFF; --goal:#F2EDEC; --goal-ink:#131111;
+  --hi:#3A221D; --ok:#3DB37A; --warn:#E0A73A; --bad:#E06A50; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#131111; --surface:#1D1A1A; --ink:#F2EDEC; --muted:#9D9492; --line:#322C2B;
+  --track:#D05A40; --track-ink:#FFFFFF; --go:#2C9A66; --go-ink:#FFFFFF; --goal:#F2EDEC; --goal-ink:#131111;
+  --hi:#3A221D; --ok:#3DB37A; --warn:#E0A73A; --bad:#E06A50; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-jp);font-size:14px;padding-inline:16px;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overflow:hidden}
+[hidden]{display:none!important}
+button{font-family:inherit}
+.app{height:100%;max-width:560px;margin:0 auto;display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;gap:8px;padding-block:8px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
+/* header */
+.head{display:flex;gap:8px;align-items:flex-start}
+details.set{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+details.set summary{list-style:none;cursor:pointer;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+details.set summary::-webkit-details-marker{display:none}
+details.set summary b{color:var(--ink);font-weight:700}
+.set-body{padding:4px 12px 12px;display:grid;gap:10px}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row > span{font-size:12px;color:var(--muted);min-width:4.2em}
+.chip{font:600 15px var(--f-num);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,.btn:focus-visible,summary:focus-visible,.hbtn:focus-visible{outline:2px solid var(--track);outline-offset:2px}
+input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.hbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer}
+
+/* clock */
+.clock{text-align:center}
+.total{font-size:clamp(60px,20vw,100px);font-weight:600;line-height:.95}
+.total-sec{font-size:15px;color:var(--muted);margin-top:2px}
+.gps{display:flex;justify-content:center;align-items:baseline;gap:14px;margin-top:6px;flex-wrap:wrap}
+.gps .dist{font-size:38px;font-weight:700;line-height:1}
+.gps .unit{font-size:15px;color:var(--muted);margin-left:2px}
+.gps .pace{font-size:14px;color:var(--muted)}
+.gps .pace .num{font-size:22px;color:var(--ink);font-weight:600}
+.pill{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid currentColor;color:var(--muted);white-space:nowrap}
+.pill.good{color:var(--ok)} .pill.fair{color:var(--warn)} .pill.weak,.pill.denied{color:var(--bad)}
+.cur{display:flex;justify-content:center;gap:12px;align-items:baseline;margin-top:6px;font-size:13px;color:var(--muted)}
+.cur .num{font-size:22px;color:var(--ink);font-weight:600}
+.state{display:inline-block;font-size:11px;letter-spacing:.12em;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.state.run{background:var(--track);border-color:var(--track);color:var(--track-ink)}
+
+/* projections */
+.pred{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px}
+.pred table{width:100%;border-collapse:collapse}
+.pred th{font-size:11px;font-weight:500;color:var(--muted);text-align:right;padding-bottom:2px;letter-spacing:.05em}
+.pred th:first-child{text-align:left}
+.pred td{text-align:right;padding:1px 0;font-size:20px;font-weight:600}
+.pred td:first-child{text-align:left;font-size:15px;color:var(--muted)}
+.pred td.dim{color:var(--line)}
+
+/* laps */
+.laps{overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;min-height:0}
+.lap{display:grid;grid-template-columns:2.6em 1fr auto auto;gap:10px;align-items:baseline;padding:7px 12px;border-bottom:1px solid var(--line)}
+.lap:last-child{border-bottom:0}
+.lap.new{background:var(--hi)}
+.lap .n{font:600 15px var(--f-num);color:var(--muted)}
+.lap .t{font-size:24px;font-weight:600}
+.lap .s{font-size:16px}
+.lap .sp{font-size:15px;color:var(--muted);min-width:4.6em;text-align:right}
+.lap .d{font-size:11px;color:var(--muted);font-family:var(--f-jp)}
+.empty{padding:16px 14px;font-size:13px;color:var(--muted);line-height:1.7}
+
+/* buttons */
+.pad{display:grid;gap:10px;padding-bottom:4px}
+.pad.idle{grid-template-columns:1fr}
+.pad.running{grid-template-columns:2fr 1fr}
+.pad.stopped{grid-template-columns:1fr 1fr 1fr}
+.btn{border:0;border-radius:16px;font-weight:700;cursor:pointer;touch-action:manipulation;
+  min-height:clamp(92px,20vh,160px);font-size:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  transition:transform .06s ease, filter .06s ease}
+.btn small{font-size:11px;font-weight:500;opacity:.8;letter-spacing:.04em}
+.btn.pressed{transform:scale(.97);filter:brightness(.88)}
+.b-start{background:var(--go);color:var(--go-ink);font-size:30px}
+.b-lap{background:var(--track);color:var(--track-ink);font-size:34px}
+.b-goal{color:var(--goal-ink);background:var(--goal);position:relative;overflow:hidden}
+.b-goal::before{content:"";position:absolute;inset:0 0 auto 0;height:12px;opacity:.35;
+  background:repeating-conic-gradient(var(--goal-ink) 0 25%, transparent 0 50%) 0 0/12px 12px}
+.b-sub{background:var(--surface);color:var(--ink);border:1px solid var(--line);font-size:17px}
+.b-sub.warn{background:var(--track);color:var(--track-ink);border-color:var(--track)}
+.pad.stopped .btn{min-height:clamp(72px,13vh,110px)}
+
+/* sheets (result / history) */
+.sheet{position:fixed;inset:0;z-index:1000;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(env(safe-area-inset-top,0px) + 8px) 16px calc(env(safe-area-inset-bottom,0px) + 24px);-webkit-user-select:text;user-select:text}
+.sheet-in{max-width:720px;margin:0 auto;display:grid;gap:14px}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:0;background:var(--bg);padding-block:6px;z-index:5}
+.sheet-head h2{margin:0;font-size:16px;font-weight:700;text-wrap:balance}
+.sheet-head .sub{font-size:12px;color:var(--muted);font-weight:500}
+.sum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sum div{background:var(--surface);padding:10px 12px}
+.sum dt{font-size:11px;color:var(--muted);letter-spacing:.06em}
+.sum dd{margin:2px 0 0;font:700 30px var(--f-num);font-variant-numeric:tabular-nums}
+.sum dd small{font:500 13px var(--f-jp);color:var(--muted);margin-left:4px}
+.mapwrap{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+#map{height:min(58vh,460px);width:100%}
+.mapbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;flex-wrap:wrap}
+.legend{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.legend i{display:block;width:90px;height:6px;border-radius:3px;background:linear-gradient(90deg,hsl(212 55% 52%),hsl(150 50% 42%),hsl(46 90% 52%),hsl(6 78% 50%))}
+.nomap{padding:24px 14px;font-size:13px;color:var(--muted);line-height:1.7}
+.tbl{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.tbl h3{margin:0;padding:10px 12px 4px;font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.06em}
+.tbl table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.tbl th{font-size:11px;font-weight:500;color:var(--muted);text-align:right;padding:4px 12px;white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl td{text-align:right;padding:6px 12px;border-top:1px solid var(--line);font:600 18px var(--f-num);white-space:nowrap}
+.tbl .m{font:500 12px var(--f-jp);color:var(--muted)}
+.tbl tr.best td{color:var(--track)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts .hbtn{flex:1;min-width:8em;padding:12px}
+.acts .hbtn.warn{background:var(--track);color:var(--track-ink);border-color:var(--track)}
+.hist{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.hist button{display:grid;grid-template-columns:1fr auto;gap:2px 12px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:12px;color:var(--ink);cursor:pointer}
+.hist button:first-child{border-top:0}
+.hist .hd{font-size:12px;color:var(--muted)}
+.hist .hv{font:700 22px var(--f-num);font-variant-numeric:tabular-nums}
+.hist .hs{font-size:12px;color:var(--muted);text-align:right;align-self:end}
+.leaflet-container{font-family:var(--f-jp)}
+.lapmark{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font:600 12px var(--f-num);white-space:nowrap}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:2000}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion: reduce){.btn,.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="head">
+    <details class="set" id="set">
+      <summary><span>設定　1周 <b class="num" id="sumDist">400m</b><span id="sumFirst"></span></span><span>▾</span></summary>
+      <div class="set-body">
+        <div class="row" id="distRow"><span>1周の距離</span>
+          <button class="chip" data-d="200">200</button><button class="chip" data-d="300">300</button>
+          <button class="chip" data-d="400">400</button><button class="chip" data-d="1000">1000</button>
+          <input class="custom num" id="customDist" type="number" inputmode="numeric" min="50" max="10000" placeholder="任意 m">
+        </div>
+        <div class="row" id="firstRow"><span>1周目</span>
+          <button class="chip" data-f="0">同じ</button><button class="chip" data-f="200">200</button><button class="chip" data-f="300">300</button>
+        </div>
+        <div class="row"><span>GPS記録</span><button class="chip" id="gpsBtn">オン</button></div>
+        <div class="row"><span>操作音</span><button class="chip" id="soundBtn">オン</button></div>
+      </div>
+    </details>
+    <button class="hbtn" id="histBtn">履歴</button>
+  </div>
+
+  <section class="clock">
+    <div class="total num" id="total">0:00.0</div>
+    <div class="total-sec num" id="totalSec">0.0秒</div>
+    <div class="gps">
+      <span><span class="dist num" id="dist">0.00</span><span class="unit">km</span></span>
+      <span class="pace">平均 <span class="num" id="pace">--:--</span> /km</span>
+      <span class="pill" id="gpsPill">GPS 待機</span>
+    </div>
+    <div class="cur"><span class="state" id="state">待機中</span><span>現在の周 <span class="num" id="curLap">0:00.0</span></span><span id="curLapSec" class="num">0.0秒</span></div>
+  </section>
+
+  <section class="pred" aria-label="通過予測">
+    <table>
+      <thead><tr><th>通過予測</th><th>直近ラップ</th><th>平均ペース</th></tr></thead>
+      <tbody id="predBody"></tbody>
+    </table>
+  </section>
+
+  <section class="laps" id="laps" aria-label="ラップ一覧"></section>
+
+  <section class="pad idle" id="pad"></section>
+</div>
+
+<section class="sheet" id="result" hidden aria-label="記録">
+  <div class="sheet-in">
+    <div class="sheet-head"><h2 id="rTitle">記録</h2><button class="hbtn" data-close="result">閉じる</button></div>
+    <dl class="sum" id="rSum"></dl>
+    <div class="mapwrap">
+      <div id="map"></div>
+      <div class="mapbar">
+        <div class="row" id="layerRow"><button class="chip" data-layer="pale" aria-pressed="true">地図</button><button class="chip" data-layer="photo">写真</button></div>
+        <div class="legend">遅い<i></i>速い</div>
+      </div>
+    </div>
+    <div class="tbl" id="rKm"></div>
+    <div class="tbl" id="rLaps"></div>
+    <div class="acts"><button class="hbtn" id="rCopy">記録をコピー</button><button class="hbtn" id="rDel">この記録を削除</button></div>
+  </div>
+</section>
+
+<section class="sheet" id="history" hidden aria-label="履歴">
+  <div class="sheet-in">
+    <div class="sheet-head"><h2>履歴<span class="sub">　この端末に最大30件</span></h2><button class="hbtn" data-close="history">閉じる</button></div>
+    <div class="hist" id="histList"></div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+const KEY='lapwatch.v1', RKEY='lapwatch.runs', MAXRUNS=30;
+const PRED=[1000,3000,5000];
+const DEF={status:'idle',acc:0,startAt:0,laps:[],lapDist:400,firstDist:0,sound:true,gps:true,
+  pts:[],gdist:0,seg:0,runId:null,runDate:null};
+let S=load();
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&Array.isArray(v.laps))return Object.assign({},DEF,v);}catch(e){}return Object.assign({},DEF);}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function loadRuns(){try{const r=JSON.parse(localStorage.getItem(RKEY));return Array.isArray(r)?r:[];}catch(e){return [];}}
+function saveRuns(r){while(true){try{localStorage.setItem(RKEY,JSON.stringify(r));return true;}catch(e){if(r.length<=1)return false;r.pop();}}}
+
+const $=id=>document.getElementById(id);
+const pad2=n=>String(n).padStart(2,'0');
+function tenths(ms){return Math.floor(Math.max(0,ms)/100);}
+function fmtClock(ms){const t=tenths(ms),d=t%10,s=Math.floor(t/10),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;
+  return (h?h+':'+pad2(m):m)+':'+pad2(ss)+'.'+d;}
+function fmtSec(ms){const t=tenths(ms);return Math.floor(t/10)+'.'+(t%10)+'秒';}
+function fmtPred(ms){const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;
+  return h?`${h}時間${pad2(m)}分${pad2(ss)}秒`:`${m}分${pad2(ss)}秒`;}
+function fmtPace(msPerKm){if(!isFinite(msPerKm)||msPerKm<=0)return '--:--';const s=Math.round(msPerKm/1000);return Math.floor(s/60)+':'+pad2(s%60);}
+function fmtKm(m){return (Math.floor(m/10)/100).toFixed(2);}
+function kmLabel(m){return m%1000===0?(m/1000)+'km':m+'m';}
+function fmtDate(ts){const d=new Date(ts);return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;}
+
+function elapsed(t){return S.acc+(S.status==='running'?t-S.startAt:0);}
+function lastSplit(){return S.laps.length?S.laps[S.laps.length-1].split:0;}
+function totalDist(){return S.laps.reduce((a,l)=>a+l.dist,0);}
+function nextDist(){return (S.laps.length===0&&S.firstDist)?S.firstDist:S.lapDist;}
+
+/* geo */
+function hav(a1,o1,a2,o2){const R=6371008.8,r=Math.PI/180,da=(a2-a1)*r,dn=(o2-o1)*r;
+  const x=Math.sin(da/2)**2+Math.cos(a1*r)*Math.cos(a2*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+
+/* feedback: sound + vibration (Android) + switch-toggle haptic (iOS 18+ Safari) */
+let ac=null;
+function beep(freq,dur){if(!S.sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+  const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=freq;o.type='square';
+  g.gain.setValueAtTime(.12,ac.currentTime);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);
+  o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+dur);}catch(e){}}
+function haptic(pattern){try{if(navigator.vibrate&&navigator.vibrate(pattern))return;}catch(e){}
+  try{const l=document.createElement('label');l.style.cssText='position:fixed;left:-99px;top:0;opacity:0';
+    l.innerHTML='<input type="checkbox" switch>';document.body.appendChild(l);l.click();
+    if(Array.isArray(pattern)&&pattern.length>2)setTimeout(()=>{l.click();l.remove();},120);else l.remove();}catch(e){}}
+function feedback(kind){
+  if(kind==='lap'){haptic(35);beep(1320,.07);}
+  else if(kind==='start'){haptic(60);beep(880,.15);}
+  else if(kind==='goal'){haptic([60,80,60]);beep(660,.12);setTimeout(()=>beep(990,.18),140);}
+  else haptic(20);
+}
+
+/* screen wake lock while running */
+let wl=null;
+async function lockScreen(){try{if('wakeLock' in navigator&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null;});}}catch(e){wl=null;}}
+function unlockScreen(){try{wl&&wl.release();}catch(e){}wl=null;}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(S.status==='running')lockScreen();gpsStart();}});
+
+/* GPS */
+let watchId=null,fix=null,gState='wait',rejects=0;
+function gpsStart(){
+  if(!S.gps){gpsStop();gState='off';return;}
+  if(!('geolocation' in navigator)){gState='none';return;}
+  if(watchId!==null)return;
+  try{watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:20000});}catch(e){gState='none';}
+}
+function gpsStop(){if(watchId!==null){try{navigator.geolocation.clearWatch(watchId);}catch(e){}watchId=null;}}
+function onErr(e){gState=e.code===1?'denied':'weak';if(e.code===1)gpsStop();}
+function onPos(p){
+  const c=p.coords;fix={acc:c.accuracy,at:Date.now()};
+  gState=c.accuracy<=15?'good':c.accuracy<=35?'fair':'weak';
+  if(S.status!=='running'||c.accuracy>35)return;
+  const now=Date.now(),ts=Math.min(p.timestamp||now,now);
+  if(ts<S.startAt)return;
+  addPoint(elapsed(ts),c.latitude,c.longitude);
+}
+function addPoint(t,lat,lng){
+  lat=Math.round(lat*1e6)/1e6;lng=Math.round(lng*1e6)/1e6;
+  const last=S.pts[S.pts.length-1];
+  if(!last||last[3]!==S.seg){S.pts.push([Math.round(t),lat,lng,S.seg]);return;}
+  const dt=(t-last[0])/1000;if(dt<=0)return;
+  const d=hav(last[1],last[2],lat,lng);
+  if(d<4)return;                         // standing-still jitter
+  if(d/dt>12&&rejects<5){rejects++;return;} // implausible jump
+  if(rejects>=5){rejects=0;S.seg++;S.pts.push([Math.round(t),lat,lng,S.seg]);return;}
+  rejects=0;S.pts.push([Math.round(t),lat,lng,S.seg]);S.gdist+=d;
+}
+function renderGps(){
+  const el=$('gpsPill');let txt,cls=gState;
+  const stale=fix&&Date.now()-fix.at>10000;
+  if(gState==='off')txt='GPS オフ';
+  else if(gState==='none')txt='GPS 非対応';
+  else if(gState==='denied')txt='位置情報 未許可';
+  else if(!fix)txt='GPS 測位中',cls='';
+  else if(stale)txt='GPS 受信なし',cls='weak';
+  else txt=(gState==='weak'?'GPS 弱い ':'GPS ')+'±'+Math.round(fix.acc)+'m';
+  el.textContent=txt;el.className='pill '+cls;
+}
+
+/* actions (t = time captured at the moment of touch) */
+function start(t){if(S.status==='running')return;
+  if(S.status==='idle'){S.pts=[];S.gdist=0;S.seg=0;S.runId=Date.now();S.runDate=Date.now();}
+  else S.seg++;
+  S.startAt=t;S.status='running';save();feedback('start');lockScreen();gpsStart();render();}
+function lap(t,isGoal){if(S.status!=='running')return false;const e=elapsed(t),ms=e-lastSplit();
+  if(ms<300)return false;S.laps.push({ms,split:e,dist:nextDist(),gd:Math.round(S.gdist),goal:!!isGoal});return true;}
+function doLap(t){if(lap(t,false)){save();feedback('lap');render();}}
+function goal(t){if(S.status!=='running')return;lap(t,true);S.acc=elapsed(t);S.status='stopped';save();feedback('goal');unlockScreen();
+  const run=storeRun();render();openResult(run);}
+function storeRun(){
+  const run={id:S.runId||Date.now(),date:S.runDate||Date.now(),ms:S.acc,laps:S.laps,lapDist:S.lapDist,firstDist:S.firstDist,gdist:Math.round(S.gdist),pts:S.pts};
+  const runs=loadRuns().filter(r=>r.id!==run.id);runs.unshift(run);if(runs.length>MAXRUNS)runs.length=MAXRUNS;
+  if(!saveRuns(runs))toast('端末の保存容量が足りず、履歴に残せませんでした');
+  return run;
+}
+let resetArmed=0;
+function reset(){if(Date.now()-resetArmed>3000){resetArmed=Date.now();feedback('tap');renderPad();
+    setTimeout(()=>{if(resetArmed&&Date.now()-resetArmed>=3000){resetArmed=0;renderPad();}},3050);return;}
+  resetArmed=0;Object.assign(S,{status:'idle',acc:0,startAt:0,laps:[],pts:[],gdist:0,seg:0,runId:null,runDate:null});save();feedback('tap');render();}
+
+function runText(run){
+  const lines=['ラップ記録 '+fmtDate(run.date),'1周 '+run.lapDist+'m'];
+  run.laps.forEach((l,i)=>lines.push(`${l.goal?'GOAL':(i+1)+'周'} (${l.dist}m)  ${fmtClock(l.ms)}（${fmtSec(l.ms)}）  通過 ${fmtClock(l.split)}`));
+  lines.push('合計 '+fmtClock(run.ms)+'（'+fmtSec(run.ms)+'）');
+  if(run.gdist>0)lines.push('GPS距離 '+fmtKm(run.gdist)+'km　平均 '+fmtPace(run.ms/run.gdist*1000)+'/km');
+  const ks=kmSplits(run);if(ks.length){lines.push('— 1kmごと —');ks.forEach(k=>lines.push(`${k.label}  ${fmtClock(k.ms)}（${fmtSec(k.ms)}）`));}
+  return lines.join('\n');
+}
+function copyText(txt){const ok=()=>toast('記録をコピーしました');
+  try{navigator.clipboard.writeText(txt).then(ok,()=>fallbackCopy(txt));}catch(e){fallbackCopy(txt);}}
+function fallbackCopy(txt){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+  let ok=false;try{ok=document.execCommand('copy');}catch(e){}ta.remove();toast(ok?'記録をコピーしました':'コピーできませんでした');}
+let tt;function toast(m){const el=$('toast');el.textContent=m;el.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('on'),1800);}
+
+/* rendering: main screen */
+function renderPad(){
+  const p=$('pad');p.className='pad '+S.status;
+  if(S.status==='idle')p.innerHTML='<button class="btn b-start" data-act="start">スタート<small>Space / Enter</small></button>';
+  else if(S.status==='running')p.innerHTML='<button class="btn b-lap" data-act="lap">ラップ<small>Space / Enter</small></button><button class="btn b-goal" data-act="goal">ゴール<small>Esc</small></button>';
+  else p.innerHTML='<button class="btn b-start" data-act="start" style="font-size:20px">再開</button>'+
+    `<button class="btn b-sub${resetArmed?' warn':''}" data-act="reset">${resetArmed?'もう一度<br>押して消去':'リセット'}</button>`+
+    '<button class="btn b-sub" data-act="result">記録と<br>マップ</button>';
+}
+function renderPred(){
+  const n=S.laps.length,last=S.laps[n-1],dist=totalDist();
+  const pl=last?last.ms/last.dist:null,pa=n?last.split/dist:null;
+  $('predBody').innerHTML=PRED.map(d=>`<tr><td>${kmLabel(d)}</td>`+
+    `<td class="num${pl?'':' dim'}">${pl?fmtPred(pl*d):'—'}</td><td class="num${pa?'':' dim'}">${pa?fmtPred(pa*d):'—'}</td></tr>`).join('');
+}
+function renderLaps(){
+  const el=$('laps');
+  if(!S.laps.length){el.innerHTML='<div class="empty">スタート後に「ラップ」を押すたび、ここに周回タイムが並びます（新しい周が上）。ゴールを押すと、GPSで記録した走路をマップで表示します。</div>';return;}
+  const showDist=S.laps.some(l=>l.dist!==S.laps[0].dist)||S.firstDist;
+  el.innerHTML=S.laps.map((l,i)=>({l,i})).reverse().map(({l,i},k)=>{
+    const prevGd=i?S.laps[i-1].gd:0,lg=(l.gd||0)-(prevGd||0);
+    const meta=[showDist?l.dist+'m':'',S.gdist>0&&lg>0?'GPS '+lg+'m':''].filter(Boolean).join(' · ');
+    return `<div class="lap${k===0?' new':''}"><span class="n">${l.goal?'GOAL':pad2(i+1)}</span>`+
+    `<span><span class="t num">${fmtClock(l.ms)}</span>${meta?` <span class="d">${meta}</span>`:''}</span>`+
+    `<span class="s num">${fmtSec(l.ms)}</span><span class="sp num">${fmtClock(l.split)}</span></div>`;}).join('');
+}
+function renderSettings(){
+  document.querySelectorAll('#distRow .chip').forEach(c=>c.setAttribute('aria-pressed',+c.dataset.d===S.lapDist));
+  $('customDist').value=[200,300,400,1000].includes(S.lapDist)?'':S.lapDist;
+  document.querySelectorAll('#firstRow .chip').forEach(c=>c.setAttribute('aria-pressed',+c.dataset.f===S.firstDist));
+  $('soundBtn').textContent=S.sound?'オン':'オフ';$('soundBtn').setAttribute('aria-pressed',S.sound);
+  $('gpsBtn').textContent=S.gps?'オン':'オフ';$('gpsBtn').setAttribute('aria-pressed',S.gps);
+  $('sumDist').textContent=S.lapDist+'m';$('sumFirst').textContent=S.firstDist?`　1周目 ${S.firstDist}m`:'';
+}
+function render(){renderPad();renderPred();renderLaps();renderSettings();tick();}
+function tick(){
+  const t=Date.now(),e=elapsed(t),cl=e-lastSplit();
+  $('total').textContent=fmtClock(e);$('totalSec').textContent=fmtSec(e)+(S.laps.length?`　${S.laps.length}周 / ${totalDist()}m`:'');
+  $('curLap').textContent=fmtClock(S.status==='idle'?0:cl);$('curLapSec').textContent=fmtSec(S.status==='idle'?0:cl);
+  $('dist').textContent=fmtKm(S.gdist);$('pace').textContent=S.gdist>=50?fmtPace(e/S.gdist*1000):'--:--';
+  const st=$('state');st.textContent=S.status==='running'?'計測中':S.status==='stopped'?'停止':'待機中';st.className='state'+(S.status==='running'?' run':'');
+  renderGps();
+}
+let lastSave=0;
+(function loop(){if(S.status==='running'){tick();if(Date.now()-lastSave>10000){lastSave=Date.now();save();}}requestAnimationFrame(loop);})();
+setInterval(()=>{if(S.status!=='running')renderGps();},2000);
+
+/* analysis */
+function kmSplits(run){
+  const pts=run.pts||[],out=[];let cd=0,next=1000,prevT=0,prev=null;
+  for(const p of pts){
+    if(prev&&prev[3]===p[3]){const d=hav(prev[1],prev[2],p[1],p[2]);
+      while(d>0&&cd+d>=next){const f=(next-cd)/d,tc=prev[0]+f*(p[0]-prev[0]);out.push({label:(next/1000)+'km',ms:tc-prevT,at:tc,full:true});prevT=tc;next+=1000;}
+      cd+=d;}
+    prev=p;
+  }
+  const rest=cd-(next-1000);
+  if(out.length&&rest>=50)out.push({label:fmtKm(cd)+'km',ms:run.ms-prevT,at:run.ms,full:false,dist:rest});
+  else if(!out.length&&cd>=50)out.push({label:fmtKm(cd)+'km',ms:run.ms,at:run.ms,full:false,dist:cd});
+  return out;
+}
+function posAt(pts,t){
+  if(!pts.length)return null;if(t<=pts[0][0])return [pts[0][1],pts[0][2]];
+  for(let i=1;i<pts.length;i++){if(pts[i][0]>=t){const a=pts[i-1],b=pts[i],f=(t-a[0])/((b[0]-a[0])||1);return [a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];}}
+  const l=pts[pts.length-1];return [l[1],l[2]];
+}
+function paceColor(f){ // f: 0 slow -> 1 fast
+  const stops=[[212,55,52],[150,50,42],[46,90,52],[6,78,50]];
+  const x=Math.max(0,Math.min(1,f))*(stops.length-1),i=Math.min(stops.length-2,Math.floor(x)),u=x-i,a=stops[i],b=stops[i+1];
+  return `hsl(${a[0]+(b[0]-a[0])*u} ${a[1]+(b[1]-a[1])*u}% ${a[2]+(b[2]-a[2])*u}%)`;
+}
+
+/* result sheet */
+let map=null,tiles={},layer='pale',drawn=null,curRun=null,delArmed=0;
+function openSheet(id){$(id).hidden=false;$(id).scrollTop=0;}
+function closeSheet(id){$(id).hidden=true;}
+function openResult(run){
+  curRun=run;delArmed=0;$('rDel').textContent='この記録を削除';$('rDel').classList.remove('warn');
+  $('rTitle').innerHTML=`記録<span class="sub">　${fmtDate(run.date)}</span>`;
+  const pace=run.gdist>=50?fmtPace(run.ms/run.gdist*1000):'--:--';
+  const lapN=run.laps.length;
+  $('rSum').innerHTML=
+    `<div><dt>タイム</dt><dd>${fmtClock(run.ms)}<small>${fmtSec(run.ms)}</small></dd></div>`+
+    `<div><dt>距離（GPS）</dt><dd>${fmtKm(run.gdist||0)}<small>km</small></dd></div>`+
+    `<div><dt>平均ペース</dt><dd>${pace}<small>/km</small></dd></div>`+
+    `<div><dt>ラップ</dt><dd>${lapN}<small>周 · 設定 ${run.laps.reduce((a,l)=>a+l.dist,0)}m</small></dd></div>`;
+  const ks=kmSplits(run);
+  const fulls=ks.filter(k=>k.full),best=fulls.length>1?Math.min(...fulls.map(k=>k.ms)):-1;
+  $('rKm').innerHTML=ks.length?'<h3>1kmごと（GPS）</h3><table><thead><tr><th>区間</th><th>タイム</th><th>秒</th><th>通過</th></tr></thead><tbody>'+
+    ks.map(k=>`<tr class="${k.ms===best?'best':''}"><td>${k.label}</td><td>${fmtClock(k.ms)}</td><td>${fmtSec(k.ms)}</td><td>${fmtClock(k.at)}</td></tr>`).join('')+'</tbody></table>'
+    :'<h3>1kmごと（GPS）</h3><div class="nomap">GPSの記録が足りないため、1kmごとのタイムは出せませんでした。</div>';
+  $('rLaps').innerHTML=lapN?'<h3>ラップ</h3><table><thead><tr><th>周</th><th>タイム</th><th>秒</th><th>GPS距離</th><th>ペース</th></tr></thead><tbody>'+
+    run.laps.map((l,i)=>{const lg=(l.gd||0)-(i?run.laps[i-1].gd||0:0);
+      return `<tr><td>${l.goal?'GOAL':(i+1)}<span class="m"> ${l.dist}m</span></td><td>${fmtClock(l.ms)}</td><td>${fmtSec(l.ms)}</td><td>${lg>0?lg+'m':'—'}</td><td>${fmtPace(l.ms/l.dist*1000)}</td></tr>`;}).join('')+
+    '</tbody></table>':'';
+  closeSheet('history');openSheet('result');
+  requestAnimationFrame(()=>drawMap(run));
+}
+function drawMap(run){
+  const el=$('map'),pts=run.pts||[];
+  if(!window.L){el.innerHTML='<div class="nomap">地図を読み込めませんでした（電波の届く場所で開き直すと表示されます）。</div>';return;}
+  if(pts.length<2){if(map){map.remove();map=null;}el.innerHTML='<div class="nomap">GPSの位置が記録されていないため、地図は表示できません。設定で「GPS記録」がオンになっているか、位置情報の許可を確認してください。</div>';return;}
+  if(!map){el.innerHTML='';
+    map=L.map(el,{preferCanvas:true,zoomControl:true,attributionControl:true});
+    const att='<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>';
+    tiles.pale=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxNativeZoom:18,maxZoom:20,attribution:att});
+    tiles.photo=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',{maxNativeZoom:18,maxZoom:20,attribution:att});
+    tiles[layer].addTo(map);
+  }
+  if(drawn)drawn.remove();drawn=L.featureGroup().addTo(map);
+  // smoothed pace per segment
+  const sp=[];for(let i=1;i<pts.length;i++){if(pts[i][3]!==pts[i-1][3]){sp.push(null);continue;}
+    let a=i-1,b=i; // ~10s window each side, within the same segment
+    while(a>0&&pts[a-1][3]===pts[i][3]&&pts[i][0]-pts[a-1][0]<=10000)a--;
+    while(b<pts.length-1&&pts[b+1][3]===pts[i][3]&&pts[b+1][0]-pts[i][0]<=10000)b++;
+    let d=0;for(let j=a+1;j<=b;j++)d+=hav(pts[j-1][1],pts[j-1][2],pts[j][1],pts[j][2]);const dt=pts[b][0]-pts[a][0];
+    sp.push(d>0&&dt>0?d/dt:null);}
+  const vals=sp.filter(v=>v).sort((x,y)=>x-y),lo=vals[Math.floor(vals.length*.1)]||0,hi=vals[Math.floor(vals.length*.9)]||1;
+  for(let i=1;i<pts.length;i++){const v=sp[i-1];if(v===null)continue;
+    L.polyline([[pts[i-1][1],pts[i-1][2]],[pts[i][1],pts[i][2]]],{color:paceColor(hi>lo?(v-lo)/(hi-lo):.5),weight:5,opacity:.95,lineCap:'round'}).addTo(drawn);}
+  run.laps.forEach((l,i)=>{if(l.goal)return;const p=posAt(pts,l.split);if(!p)return;
+    L.circleMarker(p,{radius:4,color:'#fff',weight:2,fillColor:'#1C1919',fillOpacity:1}).bindTooltip(`${i+1}周 ${fmtClock(l.ms)}`,{className:'lapmark',direction:'top'}).addTo(drawn);});
+  L.circleMarker([pts[0][1],pts[0][2]],{radius:7,color:'#fff',weight:2,fillColor:'#1E7650',fillOpacity:1}).bindTooltip('スタート',{className:'lapmark'}).addTo(drawn);
+  const e=pts[pts.length-1];L.circleMarker([e[1],e[2]],{radius:7,color:'#fff',weight:2,fillColor:'#B5432C',fillOpacity:1}).bindTooltip('ゴール',{className:'lapmark'}).addTo(drawn);
+  map.invalidateSize();map.fitBounds(drawn.getBounds(),{padding:[24,24],maxZoom:18});
+}
+$('layerRow').addEventListener('click',e=>{const c=e.target.closest('[data-layer]');if(!c||!map)return;
+  tiles[layer].remove();layer=c.dataset.layer;tiles[layer].addTo(map);
+  document.querySelectorAll('#layerRow .chip').forEach(x=>x.setAttribute('aria-pressed',x===c));});
+$('rCopy').addEventListener('click',()=>curRun&&copyText(runText(curRun)));
+$('rDel').addEventListener('click',()=>{if(!curRun)return;
+  if(Date.now()-delArmed>3000){delArmed=Date.now();$('rDel').textContent='もう一度押すと削除';$('rDel').classList.add('warn');return;}
+  saveRuns(loadRuns().filter(r=>r.id!==curRun.id));closeSheet('result');toast('記録を削除しました');openHistory();});
+
+/* history */
+function openHistory(){
+  const runs=loadRuns();
+  $('histList').innerHTML=runs.length?runs.map(r=>`<button data-run="${r.id}"><span class="hd">${fmtDate(r.date)}　${r.laps.length}周</span><span></span>`+
+    `<span class="hv">${fmtClock(r.ms)}</span><span class="hs">${r.gdist>0?fmtKm(r.gdist)+'km · '+fmtPace(r.ms/r.gdist*1000)+'/km':'GPSなし'}</span></button>`).join('')
+    :'<div class="nomap">まだ記録がありません。ゴールを押すと、ここに保存されます。</div>';
+  openSheet('history');
+}
+$('histList').addEventListener('click',e=>{const b=e.target.closest('[data-run]');if(!b)return;const r=loadRuns().find(x=>String(x.id)===b.dataset.run);if(r)openResult(r);});
+$('histBtn').addEventListener('click',openHistory);
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeSheet(b.dataset.close)));
+
+/* input: act on touch-down for timing accuracy */
+function act(name,t){if(name==='start')start(t);else if(name==='lap')doLap(t);else if(name==='goal')goal(t);else if(name==='reset')reset();
+  else if(name==='result'){const r=loadRuns().find(x=>x.id===S.runId);if(r)openResult(r);}}
+$('pad').addEventListener('pointerdown',e=>{const b=e.target.closest('[data-act]');if(!b)return;const t=Date.now();e.preventDefault();
+  b.classList.add('pressed');setTimeout(()=>b.classList.remove('pressed'),110);act(b.dataset.act,t);});
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.repeat)return;if(!$('result').hidden||!$('history').hidden)return;const t=Date.now();
+  if(e.key===' '||e.key==='Enter'||e.key==='ArrowUp'||e.key==='AudioVolumeUp'){e.preventDefault();if(S.status==='running')doLap(t);else start(t);}
+  else if(e.key==='Escape'||e.key==='ArrowDown'||e.key==='AudioVolumeDown'||e.key==='g'){if(S.status==='running'){e.preventDefault();goal(t);}}
+});
+$('distRow').addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;S.lapDist=+c.dataset.d;save();render();});
+$('customDist').addEventListener('change',e=>{const v=Math.round(+e.target.value);if(v>=50&&v<=10000){S.lapDist=v;save();}render();});
+$('firstRow').addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;S.firstDist=+c.dataset.f;save();render();});
+$('soundBtn').addEventListener('click',()=>{S.sound=!S.sound;save();render();});
+$('gpsBtn').addEventListener('click',()=>{S.gps=!S.gps;save();if(S.gps){gState='wait';fix=null;}gpsStart();render();});
+
+/* #demo: synthetic 400m-track run for checking the result screen (not saved) */
+function demoRun(){
+  const lat0=34.8667,lng0=138.3236,R=36.5,L2=84.39,per=2*L2+2*Math.PI*R,mLat=111320,mLng=111320*Math.cos(lat0*Math.PI/180);
+  function xy(s){s=((s%per)+per)%per;
+    if(s<L2)return [-L2/2+s,-R];s-=L2;
+    if(s<Math.PI*R){const a=-Math.PI/2+s/R;return [L2/2+R*Math.cos(a),R*Math.sin(a)];}s-=Math.PI*R;
+    if(s<L2)return [L2/2-s,R];s-=L2;const a=Math.PI/2+s/R;return [-L2/2+R*Math.cos(a),R*Math.sin(a)];}
+  const pts=[],laps=[];let t=0,s=0,lastLapT=0;
+  for(let k=0;k<5000;k+=4){const lapIdx=Math.floor(k/400),v=4.6+0.35*Math.sin(lapIdx/2)+(lapIdx>10?.4:0);t+=4/v*1000;
+    const [x,y]=xy(k);pts.push([Math.round(t),lat0+(y+(Math.random()-.5)*1.5)/mLat,lng0+(x+(Math.random()-.5)*1.5)/mLng,0]);
+    if((k+4)%400===0){laps.push({ms:Math.round(t-lastLapT),split:Math.round(t),dist:400,gd:k+4});lastLapT=t;}}
+  laps[laps.length-1].goal=true;
+  return {id:0,date:Date.now(),ms:Math.round(t),laps,lapDist:400,firstDist:0,gdist:5000,pts};
+}
+
+if(S.status==='running')lockScreen();
+gpsStart();
+render();
+if(location.hash==='#demo')openResult(demoRun());
+})();
+</script>
+</body>
+</html>

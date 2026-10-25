@@ -1,0 +1,12 @@
+{
+  "name": "長距離ラップウォッチ",
+  "short_name": "ラップ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#131111",
+  "theme_color": "#B5432C",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
