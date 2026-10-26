@@ -85,6 +85,7 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
 .pred td{text-align:right;padding:1px 0;font-size:20px;font-weight:600}
 .pred td:first-child{text-align:left;font-size:15px;color:var(--muted)}
 .pred td.dim{color:var(--line)}
+.pred td.done{color:var(--muted);font-size:13px;font-weight:500}
 
 /* laps */
 .laps{overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;min-height:0}
@@ -156,6 +157,7 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
   background-color:var(--surface);background-image:conic-gradient(var(--line) 0 25%,transparent 0 50%,var(--line) 0 75%,transparent 0);background-size:20px 20px}
 .preview canvas{max-width:100%;max-height:56vh;width:auto;height:auto;min-width:0;display:block;border-radius:6px}
 .sheet-in>*{min-width:0}
+.preview.free canvas{touch-action:none;cursor:grab}
 .opts{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px}
 .note{font-size:12px;color:var(--muted);line-height:1.7;margin:0}
 .acts .hbtn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -246,11 +248,13 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
 <section class="sheet" id="share" hidden aria-label="シェア画像">
   <div class="sheet-in">
     <div class="sheet-head"><h2>シェア画像</h2><button class="hbtn" data-close="share">閉じる</button></div>
-    <div class="preview"><canvas id="shareCanvas" width="1080" height="1080"></canvas></div>
+    <div class="preview" id="preview"><canvas id="shareCanvas" width="1080" height="1080"></canvas></div>
+    <p class="note" id="layoutHint">記録とルートは、指でドラッグすると上下左右に動かせます。2本指でつまむと拡大・縮小できます。</p>
     <div class="acts"><button class="hbtn primary" id="sShare">共有・保存</button><button class="hbtn" id="sCopy">画像をコピー</button></div>
     <div class="opts">
       <div class="row" data-opt="style"><span>スタイル</span><button class="chip" data-v="sticker">透過ステッカー</button><button class="chip" data-v="photo">写真に重ねる</button><button class="chip" data-v="card">カード</button></div>
       <div class="row" id="optPhoto"><span>写真</span><button class="chip" id="pickPhoto">写真を選ぶ</button><input type="file" id="photoFile" accept="image/*" hidden></div>
+      <div class="row" id="optLayout"><span>配置</span><button class="chip" id="resetLayout">位置と大きさを元に戻す</button></div>
       <div class="row" data-opt="ratio" id="optRatio"><span>サイズ</span><button class="chip" data-v="story">ストーリーズ</button><button class="chip" data-v="feed">投稿 4:5</button></div>
       <div class="row" data-opt="ink" id="optInk"><span>文字色</span><button class="chip" data-v="light">白</button><button class="chip" data-v="dark">黒</button></div>
       <div class="row" data-opt="dsrc" id="optDsrc"><span>距離</span><button class="chip" data-v="lap" id="dsLap">ラップ設定</button><button class="chip" data-v="gps" id="dsGps">GPS</button></div>
@@ -408,8 +412,10 @@ function renderPad(){
 function renderPred(){
   const n=S.laps.length,last=S.laps[n-1],dist=totalDist();
   const pl=last?last.ms/last.dist:null,pa=n?last.split/dist:null;
-  $('predBody').innerHTML=PRED.map(d=>`<tr><td>${kmLabel(d)}</td>`+
-    `<td class="num${pl?'':' dim'}">${pl?fmtPred(pl*d):'—'}</td><td class="num${pa?'':' dim'}">${pa?fmtPred(pa*d):'—'}</td></tr>`).join('');
+  // 直近ラップ: time so far + remaining distance at the latest lap's pace (= projected total passing time)
+  const lastCol=d=>!pl?'<td class="num dim">—</td>':d<=dist?'<td class="done">通過済</td>':`<td class="num">${fmtPred(last.split+(d-dist)*pl)}</td>`;
+  $('predBody').innerHTML=PRED.map(d=>`<tr><td>${kmLabel(d)}</td>`+lastCol(d)+
+    `<td class="num${pa?'':' dim'}">${pa?fmtPred(pa*d):'—'}</td></tr>`).join('');
 }
 function renderLaps(){
   const el=$('laps');
@@ -637,28 +643,75 @@ async function renderShare(){
     const col=SH.ink==='light'?'#FFFFFF':'#141212';c.shadowColor=SH.ink==='light'?'rgba(0,0,0,.35)':'rgba(255,255,255,.35)';c.shadowBlur=10;
     if(route)drawRoute(c,route,{x:170,y:30,w:740,h:620},col,12);
     drawStats(c,route?690:20,W,col,v,false);
+    cv.toBlob(b=>{if(seq===shareSeq)shareBlob=b;},'image/png');
   }else{
+    // photo / card: background + two movable, pinch-scalable stickers (route, stats)
     const H=SH.ratio==='story'?1920:1350;cv.width=W;cv.height=H;
-    const sy=SH.ratio==='story'?{date:250,rt:[380,H-1000],st:H-620}:{date:90,rt:[120,H-600],st:H-430};
+    const bg=document.createElement('canvas');bg.width=W;bg.height=H;const b=bg.getContext('2d');
     if(SH.style==='photo'&&sharePhoto){const iw=sharePhoto.naturalWidth,ih=sharePhoto.naturalHeight,k=Math.max(W/iw,H/ih);
-      c.drawImage(sharePhoto,(W-iw*k)/2,(H-ih*k)/2,iw*k,ih*k);
-      let g=c.createLinearGradient(0,sy.st-260,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.72)');c.fillStyle=g;c.fillRect(0,sy.st-260,W,H);
+      b.drawImage(sharePhoto,(W-iw*k)/2,(H-ih*k)/2,iw*k,ih*k);
     }else{
-      const g=c.createLinearGradient(0,0,0,H);
+      const g=b.createLinearGradient(0,0,0,H);
       if(SH.style==='card'){g.addColorStop(0,'#1E1A19');g.addColorStop(1,'#0F0D0D');}else{g.addColorStop(0,'#4A4240');g.addColorStop(1,'#2A2524');}
-      c.fillStyle=g;c.fillRect(0,0,W,H);
-      if(SH.style==='photo'){c.fillStyle='rgba(255,255,255,.55)';c.font='500 40px "Zen Kaku Gothic New",sans-serif';c.textAlign='center';c.fillText('下の「写真を選ぶ」から写真を選んでください',W/2,H*.32);}
+      b.fillStyle=g;b.fillRect(0,0,W,H);
+      if(SH.style==='photo'){b.fillStyle='rgba(255,255,255,.55)';b.font='500 40px "Zen Kaku Gothic New",sans-serif';b.textAlign='center';b.fillText('下の「写真を選ぶ」から写真を選んでください',W/2,H*.2);}
     }
-    if(route)drawRoute(c,route,{x:140,y:sy.rt[0]+(SH.ratio==='story'?200:60),w:800,h:sy.rt[1]-sy.rt[0]-(SH.ratio==='story'?200:60)},SH.style==='card'?'#FF6B3D':'#FFFFFF',12);
-    c.shadowColor='rgba(0,0,0,.3)';c.shadowBlur=SH.style==='photo'?10:0;
-    drawStats(c,sy.st,W,'#FFFFFF',v,true);c.shadowBlur=0;
+    const shadow=SH.style==='photo'?'rgba(0,0,0,.45)':'rgba(0,0,0,0)';
+    const st=document.createElement('canvas');st.width=W;st.height=300;const sc=st.getContext('2d');sc.shadowColor=shadow;sc.shadowBlur=12;drawStats(sc,8,W,'#FFFFFF',v,true);
+    let rt=null;
+    if(route){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;route.forEach(p=>{x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);});
+      const bw=Math.max(x1-x0,1),bh=Math.max(y1-y0,1),k=Math.min(760/bw,760/bh);
+      rt=document.createElement('canvas');rt.width=Math.round(bw*k)+40;rt.height=Math.round(bh*k)+40;const rc=rt.getContext('2d');rc.shadowColor=shadow;rc.shadowBlur=10;
+      drawRoute(rc,route,{x:20,y:20,w:rt.width-40,h:rt.height-40},SH.style==='card'?'#FF6B3D':'#FFFFFF',12);}
+    const key=SH.style+'/'+SH.ratio;
+    if(!LAY||LAY.key!==key){const story=SH.ratio==='story';
+      LAY={key,stats:{cx:W/2,cy:story?H-470:H-200,s:1},route:{cx:W/2,cy:story?H*.42:(H-300)/2+20,s:story?1:.85}};}
+    ED={bg,items:{route:rt,stats:st},W,H};
+    compose(false);finalizeShare(seq);
   }
-  cv.toBlob(b=>{if(seq===shareSeq)shareBlob=b;},'image/png');
 }
+/* free placement editor (photo / card) */
+let LAY=null,ED=null,activeItem=null,blobTimer=null;
+function itemBox(name){const cv=ED&&ED.items[name],p=LAY&&LAY[name];if(!cv||!p)return null;const w=cv.width*p.s,h=cv.height*p.s;return {x:p.cx-w/2,y:p.cy-h/2,w,h};}
+function compose(guide){
+  if(!ED)return;const cv=$('shareCanvas'),c=cv.getContext('2d');
+  c.clearRect(0,0,ED.W,ED.H);c.drawImage(ED.bg,0,0);
+  ['route','stats'].forEach(n=>{const b=itemBox(n);if(!b)return;c.drawImage(ED.items[n],b.x,b.y,b.w,b.h);
+    if(guide&&n===activeItem){c.save();c.strokeStyle='rgba(255,255,255,.9)';c.setLineDash([16,12]);c.lineWidth=4;c.strokeRect(b.x,b.y,b.w,b.h);c.restore();}});
+}
+function finalizeShare(seq){compose(false);const cv=$('shareCanvas');cv.toBlob(b=>{if(seq===shareSeq)shareBlob=b;},'image/png');}
+function freeMode(){return SH.style!=='sticker'&&!!ED;}
+(function(){
+  const cv=$('shareCanvas'),ptrs=new Map();let g=null,raf=0;
+  const toCanvas=e=>{const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height};};
+  const hit=p=>{for(const n of ['stats','route']){const b=itemBox(n);if(b&&p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h)return n;}return null;};
+  const mid=ps=>({x:ps.reduce((a,p)=>a+p.x,0)/ps.length,y:ps.reduce((a,p)=>a+p.y,0)/ps.length});
+  const gap=ps=>Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
+  function rebase(){const ps=[...ptrs.values()];if(!ps.length){g=null;return;}
+    const target=(g&&g.target)||hit(ps[0]);if(!target){g={target:null};return;}
+    const it=LAY[target];g={target,cx:it.cx,cy:it.cy,s:it.s,m0:mid(ps),d0:ps.length>1?gap(ps):0};activeItem=target;}
+  function draw(){raf=0;compose(true);}
+  function startDrag(){shareSeq++;shareBlob=null;}
+  cv.addEventListener('pointerdown',e=>{if(!freeMode())return;e.preventDefault();try{cv.setPointerCapture(e.pointerId);}catch(err){}
+    ptrs.set(e.pointerId,toCanvas(e));rebase();if(g&&g.target){startDrag();if(!raf)raf=requestAnimationFrame(draw);}});
+  cv.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;e.preventDefault();ptrs.set(e.pointerId,toCanvas(e));
+    if(!g||!g.target)return;const ps=[...ptrs.values()],m=mid(ps),it=LAY[g.target];
+    it.cx=g.cx+(m.x-g.m0.x);it.cy=g.cy+(m.y-g.m0.y);
+    if(ps.length>1&&g.d0>0)it.s=Math.max(.25,Math.min(3,g.s*gap(ps)/g.d0));
+    it.cx=Math.max(0,Math.min(ED.W,it.cx));it.cy=Math.max(0,Math.min(ED.H,it.cy));
+    if(!raf)raf=requestAnimationFrame(draw);});
+  const end=e=>{if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
+    if(ptrs.size){rebase();return;}g=null;activeItem=null;finalizeShare(++shareSeq);};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  cv.addEventListener('wheel',e=>{if(!freeMode())return;const t=hit(toCanvas(e));if(!t)return;e.preventDefault();
+    LAY[t].s=Math.max(.25,Math.min(3,LAY[t].s*(e.deltaY<0?1.06:1/1.06)));clearTimeout(blobTimer);shareSeq++;shareBlob=null;compose(false);
+    blobTimer=setTimeout(()=>finalizeShare(++shareSeq),300);},{passive:false});
+})();
+$('resetLayout').addEventListener('click',()=>{LAY=null;renderShare();});
 function renderShareUI(){
   document.querySelectorAll('#share [data-opt]').forEach(row=>row.querySelectorAll('[data-v]').forEach(ch=>ch.setAttribute('aria-pressed',SH[row.dataset.opt]===ch.dataset.v)));
   const ls=lapSum(shareRun),both=ls>0&&shareRun.gdist>0;
-  $('optRatio').hidden=SH.style==='sticker';$('optInk').hidden=SH.style!=='sticker';$('optPhoto').hidden=SH.style!=='photo';$('optDsrc').hidden=!both;
+  $('optRatio').hidden=SH.style==='sticker';$('optLayout').hidden=SH.style==='sticker';$('layoutHint').hidden=SH.style==='sticker';$('preview').classList.toggle('free',SH.style!=='sticker');$('optInk').hidden=SH.style!=='sticker';$('optPhoto').hidden=SH.style!=='photo';$('optDsrc').hidden=!both;
   $('dsLap').textContent='ラップ設定 '+fmtKm(ls)+'km';$('dsGps').textContent='GPS '+fmtKm(shareRun.gdist||0)+'km';
   $('pickPhoto').textContent=sharePhoto?'写真を変える':'写真を選ぶ';
   renderShare();
