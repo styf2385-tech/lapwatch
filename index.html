@@ -167,6 +167,41 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
 .leaflet-container{font-family:var(--f-jp)}
 .lapmark{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font:600 12px var(--f-num);white-space:nowrap}
 
+/* AI coach */
+input,textarea{-webkit-user-select:text;user-select:text}
+.sheet.coach{display:flex;flex-direction:column;overflow:hidden;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
+.coach .sheet-in{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;width:100%}
+.coach .sheet-head{position:static}
+.coach details.set{flex:none}
+.coach .head-acts{display:flex;gap:6px}
+.coach .head-acts .hbtn{white-space:nowrap}
+.chat{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-block:4px;-webkit-overflow-scrolling:touch}
+.msg{max-width:94%;padding:10px 12px;border-radius:14px;line-height:1.75;font-size:15px;-webkit-user-select:text;user-select:text;overflow-wrap:anywhere;min-width:0}
+.msg.user{align-self:flex-end;background:var(--ink);color:var(--bg);border-bottom-right-radius:4px;white-space:pre-wrap}
+.msg.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.bot h4{margin:.7em 0 .2em;font-size:15px}
+.msg.bot h4:first-child,.msg.bot p:first-child{margin-top:0}
+.msg.bot ul,.msg.bot ol{margin:.3em 0;padding-left:1.3em}
+.msg.bot p{margin:.45em 0}
+.msg.bot hr{border:0;border-top:1px solid var(--line);margin:.8em 0}
+.msg.bot code{font-size:13px;background:var(--bg);padding:1px 4px;border-radius:4px}
+.msg.bot .tw{overflow-x:auto;margin:.4em 0}
+.msg.bot table{border-collapse:collapse;font-size:13px}
+.msg.bot th,.msg.bot td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+.msg.bot th{background:var(--bg);white-space:nowrap}
+.msg.err{align-self:stretch;max-width:100%;background:var(--hi);border:1px solid var(--track);font-size:13px}
+.msg .mfoot{display:flex;justify-content:flex-end;margin-top:4px}
+.msg .mfoot button{background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 4px}
+.msg.wait::after{content:"考えています…";color:var(--muted);font-size:13px}
+.quick{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;flex:none}
+.quick .chip{font:500 13px var(--f-jp);white-space:nowrap}
+.composer{display:flex;gap:8px;align-items:flex-end;flex:none}
+.composer textarea{flex:1;min-width:0;resize:none;font:16px/1.5 var(--f-jp);padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);max-height:30vh}
+.composer .hbtn{padding:11px 14px}
+.cset label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.cset input,.cset textarea{width:100%;font:16px var(--f-jp);padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.setup ol{margin:.3em 0;padding-left:1.3em}
+.setup a{color:var(--track)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
   padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:2000}
 .toast.on{opacity:1}
@@ -189,9 +224,11 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
         </div>
         <div class="row"><span>GPS記録</span><button class="chip" id="gpsBtn">オン</button></div>
         <div class="row"><span>操作音</span><button class="chip" id="soundBtn">オン</button></div>
+        <div class="row"><span>版</span><b class="num" id="appVer">2026.11.08b</b><button class="chip" id="updateBtn">最新版に更新</button></div>
       </div>
     </details>
     <button class="hbtn" id="histBtn">履歴</button>
+    <button class="hbtn" id="coachBtn">AIコーチ</button>
   </div>
 
   <section class="clock">
@@ -262,6 +299,34 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
       <div class="row" data-opt="trim"><span>位置の保護</span><button class="chip" data-v="on">スタート・ゴール付近を隠す</button><button class="chip" data-v="off">隠さない</button></div>
     </div>
     <p class="note">地図・航空写真・地名は画像に入りません。「位置の保護」をオンにすると、ルートの最初と最後の200mを描きません。「画像をコピー」してInstagramのストーリーズ作成画面に貼り付けると、写真の上に自由に置けるステッカーになります（透過ステッカーがおすすめ）。</p>
+  </div>
+</section>
+
+<section class="sheet coach" id="coach" hidden aria-label="AIコーチ">
+  <div class="sheet-in">
+    <div class="sheet-head"><h2>AIコーチ</h2>
+      <div class="head-acts"><button class="hbtn" id="cNew">新しい相談</button><button class="hbtn" data-close="coach">閉じる</button></div></div>
+    <details class="set cset" id="cSet">
+      <summary><span>相談の前提　<b id="cSetSum">未設定</b></span><span>▾</span></summary>
+      <div class="set-body">
+        <label>目標レース（名前・日付・種目・目標タイム）<input id="pRace" placeholder="例：〇〇記録会 12/14 5000m 16分30秒"></label>
+        <label>いまの自己ベスト・最近のレース<input id="pPb" placeholder="例：5000m 16:58（2026年9月）"></label>
+        <label>練習できる日・時間<input id="pSchedule" placeholder="例：平日は朝60分、土日はポイント練習"></label>
+        <label>ケガ・体調・その他<textarea id="pNotes" rows="2" placeholder="例：右アキレス腱に違和感が出やすい"></textarea></label>
+        <div class="row"><span>練習記録</span><button class="chip" id="cRuns">AIに伝える</button></div>
+        <label>Anthropic APIキー（この端末の中だけに保存）<input id="pKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="sk-ant-..."></label>
+        <p class="note">ここで書いた前提と、保存されている最近の練習記録（最大15件）を、相談のたびにAIへ伝えます。前提を変えたら「新しい相談」を押すと反映されます。APIキーはこの端末の中にだけ保存され、相談するときにAnthropicへ直接送られます。</p>
+      </div>
+    </details>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <div class="quick" id="quick">
+      <button class="chip" data-q="目標レースまでの練習計画を、期分けして立ててください。">レースまでの計画</button>
+      <button class="chip" data-q="今週1週間の練習メニューを、曜日ごとに提案してください。">今週のメニュー</button>
+      <button class="chip" data-q="最近の練習記録を見て、いまの調子と次に意識することを教えてください。">最近の記録を見て</button>
+      <button class="chip" data-q="目標タイムから逆算した、ポイント練習の設定ペースを教えてください。">設定ペース</button>
+      <button class="chip" data-q="レース前2週間の調整（テーパリング）の組み方を教えてください。">レース前の調整</button>
+    </div>
+    <form class="composer" id="cForm"><textarea id="cInput" rows="1" placeholder="相談したいことを書いてください"></textarea><button class="hbtn primary" id="cSend" type="submit">送信</button></form>
   </div>
 </section>
 
@@ -564,19 +629,24 @@ function shareFile(blob,name,type){
   else downloadBlob(blob,name);
 }
 function ymd(ts){const d=new Date(ts);return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate());}
-$('hExport').addEventListener('click',()=>{const runs=loadRuns();if(!runs.length){toast('書き出す記録がありません');return;}
-  shareFile(new Blob([JSON.stringify({app:'lapwatch',version:1,exported:Date.now(),runs})],{type:'application/json'}),`lapwatch-backup-${ymd(Date.now())}.json`,'application/json');});
+$('hExport').addEventListener('click',()=>{const runs=loadRuns();
+  const profile={race:prof.race,pb:prof.pb,schedule:prof.schedule,notes:prof.notes}; // never includes the API key
+  if(!runs.length&&!Object.values(profile).some(Boolean)){toast('書き出す記録がありません');return;}
+  shareFile(new Blob([JSON.stringify({app:'lapwatch',version:1,exported:Date.now(),runs,profile})],{type:'application/json'}),`lapwatch-backup-${ymd(Date.now())}.json`,'application/json');});
 $('hImport').addEventListener('click',()=>$('importFile').click());
 $('importFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
   f.text().then(txt=>{let d;try{d=JSON.parse(txt);}catch(err){toast('ファイルを読み込めませんでした');return;}
     const inc=(Array.isArray(d)?d:d&&d.runs)||[];
     const ok=inc.filter(r=>r&&r.id!=null&&Array.isArray(r.laps)&&typeof r.ms==='number'&&typeof r.date==='number')
       .map(r=>({id:r.id,date:r.date,ms:r.ms,laps:r.laps,lapDist:r.lapDist||400,firstDist:r.firstDist||0,gdist:r.gdist||0,pts:Array.isArray(r.pts)?r.pts:[]}));
-    if(!ok.length){toast('このファイルには読み込める記録がありません');return;}
+    let pf=0;const ip=d&&!Array.isArray(d)&&d.profile;
+    if(ip&&typeof ip==='object')['race','pb','schedule','notes'].forEach(k=>{if(!prof[k]&&typeof ip[k]==='string'&&ip[k]){prof[k]=ip[k];pf++;}});
+    if(pf){lsSet(PROF_KEY,prof);}
+    if(!ok.length){toast(pf?'AIコーチの前提を読み込みました':'このファイルには読み込める記録がありません');return;}
     const runs=loadRuns(),have=new Set(runs.map(r=>String(r.id)));let n=0;
     ok.forEach(r=>{if(!have.has(String(r.id))){runs.push(r);n++;}});
     runs.sort((a,b)=>b.date-a.date);if(runs.length>MAXRUNS)runs.length=MAXRUNS;
-    saveRuns(runs);renderHistory();toast(n?`${n}件の記録を読み込みました`:'新しい記録はありませんでした');
+    saveRuns(runs);renderHistory();toast((n?`${n}件の記録を読み込みました`:'新しい記録はありませんでした')+(pf?'（AIコーチの前提も読み込みました）':''));
   });});
 
 /* GPX export */
@@ -735,7 +805,7 @@ function act(name,t){if(name==='start')start(t);else if(name==='lap')doLap(t);el
   else if(name==='result'){const r=loadRuns().find(x=>x.id===S.runId);if(r)openResult(r);}}
 $('pad').addEventListener('pointerdown',e=>{const b=e.target.closest('[data-act]');if(!b)return;const t=Date.now();e.preventDefault();
   b.classList.add('pressed');setTimeout(()=>b.classList.remove('pressed'),110);act(b.dataset.act,t);});
-document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.repeat)return;if(!$('result').hidden||!$('history').hidden)return;const t=Date.now();
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.repeat)return;if([...document.querySelectorAll('.sheet')].some(x=>!x.hidden))return;const t=Date.now();
   if(e.key===' '||e.key==='Enter'||e.key==='ArrowUp'||e.key==='AudioVolumeUp'){e.preventDefault();if(S.status==='running')doLap(t);else start(t);}
   else if(e.key==='Escape'||e.key==='ArrowDown'||e.key==='AudioVolumeDown'||e.key==='g'){if(S.status==='running'){e.preventDefault();goal(t);}}
 });
@@ -760,10 +830,165 @@ function demoRun(){
   return {id:0,date:Date.now(),ms:Math.round(t),laps,lapDist:400,firstDist:0,gdist:5000,pts};
 }
 
+/* AI coach: Claude via the official Anthropic SDK, called directly from this device with the user's own API key */
+const SDK_URL='https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.3.0/+esm';
+const COACH_MODEL='claude-opus-5-5';
+const COACH_SYSTEM=`あなたは陸上長距離・ロードランニングに詳しい、経験豊富なコーチです。
+相談者は、ランニングコーチ・陸上クラブチームのコーチ・高校陸上部のトレーナー（柔道整復師）として活動している人です。自分自身の練習のほか、指導している選手の練習について相談することもあります。専門用語はそのまま使って構いません。
+
+答え方:
+- 日本語で、落ち着いた口調で答える。まず結論、そのあと短く理由。
+- 練習メニューは具体的に書く。距離・本数・設定ペース（1kmあたりと400mのラップ秒の両方）・つなぎ（距離か時間）・アップとダウンまで。
+- 週の計画は、曜日ごとの表（Markdownの表）にする。
+- 目標レースがある場合は、レースまでの期間から逆算して、期分け（鍛錬期・移行期・調整期など）とテーパリングを示す。
+- <相談者の情報> にある前提と練習記録を根拠に使う。記録にない数字やできごとを、事実のように書かない。GPSの距離は誤差を含むので、トラックのラップ設定の距離があればそちらを優先する。
+- 計画を立てるのに欠かせない前提が足りないときは、計画を出す前に、必要なことを2〜3個だけ質問して止まる。
+- 痛みやケガについては、練習の調整案は出してよいが、診断はしない。強い痛み・腫れ・長引く症状は、専門家の受診をすすめる。
+- 選手の名前など、個人を特定できる情報は求めない。`;
+const CONV_KEY='lapwatch.coach',PROF_KEY='lapwatch.profile',APIKEY_KEY='lapwatch.apikey';
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
+let prof=Object.assign({race:'',pb:'',schedule:'',notes:'',runs:true},lsGet(PROF_KEY)||{});
+let conv=lsGet(CONV_KEY);if(!conv||!Array.isArray(conv.messages))conv={ctx:'',messages:[]};
+let apiKey='';try{apiKey=localStorage.getItem(APIKEY_KEY)||'';}catch(e){}
+let sdkP=null,coachStream=null,coachBusy=false,newArmed=0;
+function loadSdk(){return sdkP||(sdkP=import(SDK_URL).then(m=>m.default).catch(err=>{sdkP=null;throw err;}));}
+function saveConv(){if(!lsSet(CONV_KEY,conv))toast('端末の保存容量が足りません。「新しい相談」で会話を整理してください');}
+
+function buildCoachContext(){
+  const d=new Date(),wd='日月火水木金土'[d.getDay()];
+  const L=[`今日の日付: ${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`];
+  L.push('目標レース: '+(prof.race||'（未入力）'));
+  L.push('自己ベスト・最近のレース: '+(prof.pb||'（未入力）'));
+  L.push('練習できる日・時間: '+(prof.schedule||'（未入力）'));
+  if(prof.notes)L.push('ケガ・体調・その他: '+prof.notes);
+  if(prof.runs){
+    const runs=loadRuns().slice(0,15);
+    if(runs.length){L.push('','このアプリに保存されている最近の練習記録（新しい順）:');
+      runs.forEach(r=>{const ls=r.laps.reduce((a,l)=>a+l.dist,0);
+        const dist=[ls?`ラップ設定 ${fmtKm(ls)}km`:'',r.gdist>0?`GPS ${fmtKm(r.gdist)}km`:''].filter(Boolean).join(' / ')||'距離不明';
+        const base=ls||r.gdist;
+        let line=`- ${fmtDate(r.date)}　タイム ${fmtClock(r.ms)}　距離 ${dist}`+(base?`　平均 ${fmtPace(r.ms/base*1000)}/km`:'');
+        if(r.laps.length)line+=`　ラップ（1周${r.lapDist}m）: `+r.laps.slice(0,40).map(l=>fmtSec(l.ms).replace('秒','')).join(', ')+(r.laps.length>40?' …':'');
+        L.push(line);});
+    }else L.push('','保存されている練習記録はまだありません。');
+  }else L.push('','練習記録は伝えない設定です。');
+  return '<相談者の情報>\n'+L.join('\n')+'\n</相談者の情報>';
+}
+
+function mdToHtml(src){
+  const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const inl=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  const isRow=l=>/^\s*\|.*\|\s*$/.test(l),isSep=l=>/^\s*\|[\s:|-]+\|\s*$/.test(l);
+  const cells=r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+  const lines=src.split('\n');let out='',list=null,para=[];
+  const fp=()=>{if(para.length){out+='<p>'+para.map(inl).join('<br>')+'</p>';para=[];}};
+  const fl=()=>{if(list){out+=`</${list}>`;list=null;}};
+  for(let i=0;i<lines.length;i++){const l=lines[i];let m;
+    if(isRow(l)){fp();fl();const rows=[];while(i<lines.length&&isRow(lines[i]))rows.push(lines[i++]);i--;
+      const head=rows.length>1&&isSep(rows[1]);
+      out+='<div class="tw"><table>'+rows.filter(r=>!isSep(r)).map((r,j)=>'<tr>'+cells(r).map(c=>head&&j===0?`<th>${inl(c)}</th>`:`<td>${inl(c)}</td>`).join('')+'</tr>').join('')+'</table></div>';continue;}
+    if((m=l.match(/^#{1,6}\s+(.*)/))){fp();fl();out+=`<h4>${inl(m[1])}</h4>`;continue;}
+    if((m=l.match(/^\s*[-*・]\s+(.*)/))){fp();if(list!=='ul'){fl();out+='<ul>';list='ul';}out+=`<li>${inl(m[1])}</li>`;continue;}
+    if((m=l.match(/^\s*\d+[.)]\s+(.*)/))){fp();if(list!=='ol'){fl();out+='<ol>';list='ol';}out+=`<li>${inl(m[1])}</li>`;continue;}
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(l)){fp();fl();out+='<hr>';continue;}
+    if(!l.trim()){fp();fl();continue;}
+    fl();para.push(l);
+  }
+  fp();fl();return out;
+}
+const msgText=m=>typeof m.content==='string'?m.content:(m.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+
+function coachSetupHtml(){
+  return '<div class="msg bot setup"><h4>はじめに：APIキーの設定</h4><p>AIコーチを使うには、AnthropicのAPIキーが必要です（相談1回あたり数円ほどの従量課金）。</p><ol>'+
+    '<li><a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a> でアカウントを作る</li>'+
+    '<li>「Billing」でクレジットを購入する（まずは5ドル程度で十分です）。使いすぎ防止に、月の上限額も設定しておくと安心です</li>'+
+    '<li>「API Keys」→「Create Key」でキーを作り、コピーする</li>'+
+    '<li>上の「相談の前提」を開き、「Anthropic APIキー」に貼り付ける</li></ol>'+
+    '<p>キーはこの端末（iPhoneやMac）の中にだけ保存されます。他の人には見せないでください。</p></div>';
+}
+function renderChat(){
+  const el=$('chat');let h='';
+  if(!apiKey)h+=coachSetupHtml();
+  if(!conv.messages.length)h+='<div class="msg bot"><p>レースに向けた練習計画やメニューの相談にのります。上の「相談の前提」に目標レースや自己ベストを入れておくと、それをもとに考えます。保存されている練習記録も参考にします。</p><p>下のボタンから始めるか、自由に書いてください。</p></div>';
+  conv.messages.forEach((m,i)=>{
+    if(m.role==='user')h+=`<div class="msg user">${mdEsc(msgText(m))}</div>`;
+    else h+=`<div class="msg bot">${mdToHtml(msgText(m))}<div class="mfoot"><button data-copy="${i}">コピー</button></div></div>`;});
+  el.innerHTML=h;el.scrollTop=el.scrollHeight;
+}
+function mdEsc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function renderCoachSettings(){
+  $('pRace').value=prof.race;$('pPb').value=prof.pb;$('pSchedule').value=prof.schedule;$('pNotes').value=prof.notes;$('pKey').value=apiKey;
+  $('cRuns').textContent=prof.runs?'AIに伝える':'伝えない';$('cRuns').setAttribute('aria-pressed',prof.runs);
+  $('cSetSum').textContent=!apiKey?'APIキー未設定':(prof.race||'目標レース未入力');
+}
+function setCoachBusy(b){coachBusy=b;$('cSend').textContent=b?'停止':'送信';}
+function coachError(text){const d=document.createElement('div');d.className='msg err';d.textContent=text;$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;}
+
+async function coachSend(text){
+  text=text.trim();if(!text||coachBusy)return;
+  if(!apiKey){$('cSet').open=true;renderChat();toast('先にAPIキーを設定してください');$('pKey').focus();return;}
+  if(!conv.messages.length)conv.ctx=buildCoachContext(); // fixed for the whole conversation
+  conv.messages.push({role:'user',content:text});saveConv();renderChat();$('cInput').value='';autoGrow();
+  const bubble=document.createElement('div');bubble.className='msg bot wait';$('chat').appendChild(bubble);$('chat').scrollTop=$('chat').scrollHeight;
+  setCoachBusy(true);let acc='';let Anthropic=null;
+  try{
+    Anthropic=await loadSdk();
+    const client=new Anthropic({apiKey,dangerouslyAllowBrowser:true});
+    coachStream=client.beta.messages.stream({
+      model:COACH_MODEL,max_tokens:16000,
+      output_config:{effort:'medium'},
+      betas:['server-side-fallback-2026-07-01'],fallbacks:'default',
+      system:[{type:'text',text:COACH_SYSTEM,cache_control:{type:'ephemeral'}},{type:'text',text:conv.ctx}],
+      messages:conv.messages});
+    coachStream.on('text',t=>{acc+=t;bubble.classList.remove('wait');bubble.innerHTML=mdToHtml(acc);const c=$('chat');if(c.scrollHeight-c.scrollTop-c.clientHeight<160)c.scrollTop=c.scrollHeight;});
+    const msg=await coachStream.finalMessage();
+    if(msg.stop_reason==='refusal'){conv.messages.pop();saveConv();renderChat();$('cInput').value=text;
+      coachError('この内容には答えられませんでした。聞き方を変えて、もう一度試してください。');}
+    else{conv.messages.push({role:'assistant',content:msg.content});saveConv();renderChat();
+      if(msg.stop_reason==='max_tokens')coachError('答えが長すぎて途中で切れました。「続きを書いて」と送ると続きを書きます。');}
+  }catch(err){
+    conv.messages.pop();saveConv();renderChat();$('cInput').value=text;autoGrow();
+    let m='うまく送れませんでした。時間をおいて、もう一度送ってください。';
+    if(!Anthropic)m='AIの読み込みに失敗しました。電波の届く場所で、もう一度送ってください。';
+    else if(err instanceof Anthropic.APIUserAbortError)m='途中で止めました。';
+    else if(err instanceof Anthropic.AuthenticationError)m='APIキーが正しくないようです。「相談の前提」のAPIキーを確認してください。';
+    else if(err instanceof Anthropic.PermissionDeniedError)m='このAPIキーでは使えないようです。Anthropicの管理画面でキーの権限を確認してください。';
+    else if(err instanceof Anthropic.RateLimitError)m='利用の上限に達したか、混み合っています。少し待ってから送ってください。';
+    else if(err instanceof Anthropic.BadRequestError)m='送った内容が受け付けられませんでした（残高不足のときもこの表示になります）。詳細: '+err.message;
+    else if(err instanceof Anthropic.APIConnectionError)m='通信できませんでした。電波の届く場所で、もう一度送ってください。';
+    else if(err instanceof Anthropic.APIError)m=`AIの側でエラーが起きました（${err.status||''}）。少し待ってから送ってください。`;
+    coachError(m);
+  }finally{coachStream=null;setCoachBusy(false);}
+}
+function autoGrow(){const t=$('cInput');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,window.innerHeight*.3)+'px';}
+function openCoach(){renderCoachSettings();renderChat();if(!apiKey)$('cSet').open=true;openSheet('coach');}
+$('coachBtn').addEventListener('click',openCoach);
+$('cForm').addEventListener('submit',e=>{e.preventDefault();if(coachBusy){coachStream&&coachStream.abort();return;}coachSend($('cInput').value);});
+$('cInput').addEventListener('input',autoGrow);
+const desktopKeys=window.matchMedia&&matchMedia('(hover: hover) and (pointer: fine)').matches;
+if(desktopKeys)$('cInput').placeholder='相談したいことを書いてください（Enterで送信、Shift+Enterで改行）';
+$('cInput').addEventListener('keydown',e=>{if(!desktopKeys||e.key!=='Enter'||e.shiftKey||e.isComposing||e.keyCode===229)return;e.preventDefault();if(!coachBusy)coachSend($('cInput').value);});
+$('quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b)coachSend(b.dataset.q);});
+$('chat').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;copyText(msgText(conv.messages[+b.dataset.copy]));});
+[['pRace','race'],['pPb','pb'],['pSchedule','schedule'],['pNotes','notes']].forEach(([id,k])=>$(id).addEventListener('input',e=>{prof[k]=e.target.value;lsSet(PROF_KEY,prof);$('cSetSum').textContent=!apiKey?'APIキー未設定':(prof.race||'目標レース未入力');}));
+$('cRuns').addEventListener('click',()=>{prof.runs=!prof.runs;lsSet(PROF_KEY,prof);renderCoachSettings();});
+$('pKey').addEventListener('change',e=>{apiKey=e.target.value.trim();try{apiKey?localStorage.setItem(APIKEY_KEY,apiKey):localStorage.removeItem(APIKEY_KEY);}catch(err){}renderCoachSettings();renderChat();if(apiKey)toast('APIキーを保存しました');});
+$('cNew').addEventListener('click',()=>{if(coachBusy)return;
+  if(!conv.messages.length){conv={ctx:'',messages:[]};saveConv();renderChat();return;}
+  if(Date.now()-newArmed>3000){newArmed=Date.now();$('cNew').textContent='もう一度押すと消去';setTimeout(()=>{if(Date.now()-newArmed>=3000)$('cNew').textContent='新しい相談';},3050);return;}
+  newArmed=0;$('cNew').textContent='新しい相談';conv={ctx:'',messages:[]};saveConv();renderChat();toast('新しい相談を始めます');});
+
+$('updateBtn').addEventListener('click',()=>{
+  if(S.status==='running'){toast('計測中は更新できません。ゴール後に押してください');return;}
+  toast('最新版を確認しています…');save();
+  fetch(location.pathname,{cache:'reload'}).catch(()=>{}).then(()=>{location.reload();});
+});
 if(S.status==='running')lockScreen();
 gpsStart();
 render();
 if(location.hash==='#demo')openResult(demoRun());
+if(location.hash==='#coach')openCoach();
 })();
 </script>
 </body>
