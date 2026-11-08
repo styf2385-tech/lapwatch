@@ -82,7 +82,7 @@ input.custom{width:5.5em;font:600 15px var(--f-num);padding:5px 8px;border:1px s
 .pred table{width:100%;border-collapse:collapse}
 .pred th{font-size:11px;font-weight:500;color:var(--muted);text-align:right;padding-bottom:2px;letter-spacing:.05em}
 .pred th:first-child{text-align:left}
-.pred td{text-align:right;padding:1px 0;font-size:20px;font-weight:600}
+.pred td{text-align:right;padding:0;font-size:18px;font-weight:600}
 .pred td:first-child{text-align:left;font-size:15px;color:var(--muted)}
 .pred td.dim{color:var(--line)}
 .pred td.done{color:var(--muted);font-size:13px;font-weight:500}
@@ -202,6 +202,44 @@ input,textarea{-webkit-user-select:text;user-select:text}
 .cset input,.cset textarea{width:100%;font:16px var(--f-jp);padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .setup ol{margin:.3em 0;padding-left:1.3em}
 .setup a{color:var(--track)}
+.modes{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.modes button{border:0;background:transparent;color:var(--muted);font:700 13px var(--f-jp);padding:7px 4px;border-radius:7px;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.modes button:focus-visible{outline:2px solid var(--track);outline-offset:2px}
+.app.m-athlete{grid-template-rows:auto auto auto auto minmax(0,1fr) auto}
+.app.m-team{grid-template-rows:auto auto auto minmax(0,1fr) auto}
+.view{display:contents}
+.tclock{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tclock .total{font-size:clamp(48px,15vw,76px)}
+.tinfo{font-size:13px;color:var(--muted);display:grid;gap:4px;justify-items:end;text-align:right}
+.tbody{overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(116px,1fr);gap:8px;min-height:100%}
+.tiles.one{grid-template-columns:1fr}
+.tile{border:0;border-radius:14px;background:var(--track);color:#FFFFFF;padding:10px 12px;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:space-between;gap:2px 8px;cursor:pointer;touch-action:manipulation;font-family:var(--f-jp);transition:transform .06s ease,filter .06s ease}
+.tile.pressed{transform:scale(.97);filter:brightness(.85)}
+.tile .tn{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .tc{font:600 15px var(--f-num);opacity:.85}
+.tile .tl{font:700 34px/1 var(--f-num);font-variant-numeric:tabular-nums}
+.tile .tls{font:600 15px var(--f-num);align-self:end;opacity:.9}
+.tile .tsub{grid-column:1/-1;font:500 13px var(--f-num);opacity:.9;font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.tile .tsub b{font-weight:700}
+.tile.fin{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.tiles.arm .tile:not(.fin){outline:4px dashed #FFFFFF;outline-offset:-8px}
+.tile:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.tbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding-bottom:4px}
+.tbar .btn{min-height:68px;font-size:16px;line-height:1.25}
+.tbar.idle{grid-template-columns:1fr}
+.tbar.idle .btn{min-height:clamp(84px,16vh,130px);font-size:26px}
+.tbar .btn.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tsetup{display:grid;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.tsetup h3{margin:0;font-size:13px;color:var(--muted);letter-spacing:.06em}
+.roster{display:flex;flex-wrap:wrap;gap:6px}
+.roster .chip{font:600 15px var(--f-jp)}
+.roster .chip .x{margin-left:6px;color:var(--track);font-weight:700}
+.addrow{display:flex;gap:6px}
+.addrow input{flex:1;min-width:0;font:16px var(--f-jp);padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.tbody .tbl{margin-bottom:8px}
+#cWho .chip{font:600 14px var(--f-jp)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
   padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:2000}
 .toast.on{opacity:1}
@@ -209,7 +247,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 </style>
 </head>
 <body>
-<div class="app" id="app">
+<div class="app m-athlete" id="app">
   <div class="head">
     <details class="set" id="set">
       <summary><span>設定　1周 <b class="num" id="sumDist">400m</b><span id="sumFirst"></span></span><span>▾</span></summary>
@@ -224,12 +262,15 @@ input,textarea{-webkit-user-select:text;user-select:text}
         </div>
         <div class="row"><span>GPS記録</span><button class="chip" id="gpsBtn">オン</button></div>
         <div class="row"><span>操作音</span><button class="chip" id="soundBtn">オン</button></div>
-        <div class="row"><span>版</span><b class="num" id="appVer">2026.11.08b</b><button class="chip" id="updateBtn">最新版に更新</button></div>
+        <div class="row"><span>版</span><b class="num" id="appVer">2026.11.09</b><button class="chip" id="updateBtn">最新版に更新</button></div>
       </div>
     </details>
     <button class="hbtn" id="histBtn">履歴</button>
     <button class="hbtn" id="coachBtn">AIコーチ</button>
   </div>
+  <div class="modes" id="modes" role="group" aria-label="モード"><button data-mode="athlete" aria-pressed="true">アスリート（自分）</button><button data-mode="team" aria-pressed="false">コーチング（選手）</button></div>
+
+  <div class="view" id="athleteView">
 
   <section class="clock">
     <div class="total num" id="total">0:00.0</div>
@@ -252,13 +293,23 @@ input,textarea{-webkit-user-select:text;user-select:text}
   <section class="laps" id="laps" aria-label="ラップ一覧"></section>
 
   <section class="pad idle" id="pad"></section>
+  </div>
+
+  <div class="view" id="teamView" hidden>
+  <section class="tclock">
+    <div class="total num" id="tTotal">0:00.0</div>
+    <div class="tinfo"><span class="state" id="tState">待機中</span><span id="tInfo"></span></div>
+  </section>
+  <section class="tbody" id="tBody" aria-label="選手"></section>
+  <section class="tbar idle" id="tBar"></section>
+  </div>
 </div>
 
 <section class="sheet" id="result" hidden aria-label="記録">
   <div class="sheet-in">
     <div class="sheet-head"><h2 id="rTitle">記録</h2><button class="hbtn" data-close="result">閉じる</button></div>
     <dl class="sum" id="rSum"></dl>
-    <div class="mapwrap">
+    <div class="mapwrap" id="rMapWrap">
       <div id="map"></div>
       <div class="mapbar">
         <div class="row" id="layerRow"><button class="chip" data-layer="pale" aria-pressed="true">地図</button><button class="chip" data-layer="photo">写真</button></div>
@@ -309,6 +360,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
     <details class="set cset" id="cSet">
       <summary><span>相談の前提　<b id="cSetSum">未設定</b></span><span>▾</span></summary>
       <div class="set-body">
+        <div class="row" id="cWho"></div>
         <label>目標レース（名前・日付・種目・目標タイム）<input id="pRace" placeholder="例：〇〇記録会 12/14 5000m 16分30秒"></label>
         <label>いまの自己ベスト・最近のレース<input id="pPb" placeholder="例：5000m 16:58（2026年9月）"></label>
         <label>練習できる日・時間<input id="pSchedule" placeholder="例：平日は朝60分、土日はポイント練習"></label>
@@ -335,7 +387,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 <script>
 (function(){
 const KEY='lapwatch.v1', RKEY='lapwatch.runs', MAXRUNS=30;
-const PRED=[1000,3000,5000];
+const PRED=[{d:1000,l:'1km'},{d:3000,l:'3km'},{d:5000,l:'5km'},{d:10000,l:'10km'},{d:21097.5,l:'ハーフ'},{d:42195,l:'フル'}];
 const DEF={status:'idle',acc:0,startAt:0,laps:[],lapDist:400,firstDist:0,sound:true,gps:true,
   pts:[],gdist:0,seg:0,runId:null,runDate:null};
 let S=load();
@@ -452,6 +504,7 @@ function reset(){if(Date.now()-resetArmed>3000){resetArmed=Date.now();feedback('
   resetArmed=0;Object.assign(S,{status:'idle',acc:0,startAt:0,laps:[],pts:[],gdist:0,seg:0,runId:null,runDate:null});save();feedback('tap');render();}
 
 function runText(run){
+  if(run.mode==='team')return teamText(run);
   const lines=['ラップ記録 '+fmtDate(run.date),'1周 '+run.lapDist+'m'];
   run.laps.forEach((l,i)=>lines.push(`${l.goal?'GOAL':(i+1)+'周'} (${l.dist}m)  ${fmtClock(l.ms)}（${fmtSec(l.ms)}）  通過 ${fmtClock(l.split)}`));
   lines.push('合計 '+fmtClock(run.ms)+'（'+fmtSec(run.ms)+'）');
@@ -479,7 +532,7 @@ function renderPred(){
   const pl=last?last.ms/last.dist:null,pa=n?last.split/dist:null;
   // 直近ラップ: time so far + remaining distance at the latest lap's pace (= projected total passing time)
   const lastCol=d=>!pl?'<td class="num dim">—</td>':d<=dist?'<td class="done">通過済</td>':`<td class="num">${fmtPred(last.split+(d-dist)*pl)}</td>`;
-  $('predBody').innerHTML=PRED.map(d=>`<tr><td>${kmLabel(d)}</td>`+lastCol(d)+
+  $('predBody').innerHTML=PRED.map(({d,l})=>`<tr><td>${l}</td>`+lastCol(d)+
     `<td class="num${pa?'':' dim'}">${pa?fmtPred(pa*d):'—'}</td></tr>`).join('');
 }
 function renderLaps(){
@@ -511,7 +564,7 @@ function tick(){
   renderGps();
 }
 let lastSave=0;
-(function loop(){if(S.status==='running'){tick();if(Date.now()-lastSave>10000){lastSave=Date.now();save();}}requestAnimationFrame(loop);})();
+requestAnimationFrame(function loop(){if(S.status==='running'){tick();if(Date.now()-lastSave>10000){lastSave=Date.now();save();}}if(mode==='team'&&T.status==='running')tickTeam();requestAnimationFrame(loop);}); // first frame runs after setup below
 setInterval(()=>{if(S.status!=='running')renderGps();},2000);
 
 /* analysis */
@@ -544,6 +597,8 @@ let map=null,tiles={},layer='pale',drawn=null,curRun=null,delArmed=0;
 function openSheet(id){$(id).hidden=false;$(id).scrollTop=0;}
 function closeSheet(id){$(id).hidden=true;}
 function openResult(run){
+  if(run.mode==='team'){openTeamResult(run);return;}
+  $('rMapWrap').hidden=false;$('rShare').hidden=false;$('rGpx').hidden=false;
   curRun=run;delArmed=0;$('rDel').textContent='この記録を削除';$('rDel').classList.remove('warn');
   $('rTitle').innerHTML=`記録<span class="sub">　${fmtDate(run.date)}</span>`;
   const pace=run.gdist>=50?fmtPace(run.ms/run.gdist*1000):'--:--';
@@ -606,8 +661,9 @@ let hDel=null,hDelAt=0;
 function renderHistory(){
   const runs=loadRuns();
   $('histList').innerHTML=runs.length?runs.map(r=>{const armed=hDel===String(r.id)&&Date.now()-hDelAt<3000;
-    return `<div class="hrow"><button class="open" data-run="${r.id}"><span class="hd">${fmtDate(r.date)}　${r.laps.length}周</span><span></span>`+
-    `<span class="hv">${fmtClock(r.ms)}</span><span class="hs">${r.gdist>0?fmtKm(r.gdist)+'km · '+fmtPace(r.ms/r.gdist*1000)+'/km':'GPSなし'}</span></button>`+
+    const team=r.mode==='team';
+    return `<div class="hrow"><button class="open" data-run="${r.id}"><span class="hd">${fmtDate(r.date)}　${team?`コーチング ${r.athletes.length}人`:r.laps.length+'周'}</span><span></span>`+
+    `<span class="hv">${fmtClock(r.ms)}</span><span class="hs">${team?mdEsc((r.target?r.target+'m · ':'')+r.athletes.map(a=>a.name).join('・')):r.gdist>0?fmtKm(r.gdist)+'km · '+fmtPace(r.ms/r.gdist*1000)+'/km':'GPSなし'}</span></button>`+
     `<button class="del${armed?' warn':''}" data-del="${r.id}">${armed?'もう一度<br>押して削除':'削除'}</button></div>`;}).join('')
     :'<div class="nomap">まだ記録がありません。ゴールを押すと、ここに保存されます。</div>';
 }
@@ -630,18 +686,22 @@ function shareFile(blob,name,type){
 }
 function ymd(ts){const d=new Date(ts);return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate());}
 $('hExport').addEventListener('click',()=>{const runs=loadRuns();
-  const profile={race:prof.race,pb:prof.pb,schedule:prof.schedule,notes:prof.notes}; // never includes the API key
-  if(!runs.length&&!Object.values(profile).some(Boolean)){toast('書き出す記録がありません');return;}
-  shareFile(new Blob([JSON.stringify({app:'lapwatch',version:1,exported:Date.now(),runs,profile})],{type:'application/json'}),`lapwatch-backup-${ymd(Date.now())}.json`,'application/json');});
+  const P=profAll.self,profile={race:P.race,pb:P.pb,schedule:P.schedule,notes:P.notes}; // never includes the API key
+  if(!runs.length&&!roster.length&&!Object.values(profile).some(Boolean)){toast('書き出す記録がありません');return;}
+  shareFile(new Blob([JSON.stringify({app:'lapwatch',version:1,exported:Date.now(),runs,profile,roster,athProfiles:profAll.ath})],{type:'application/json'}),`lapwatch-backup-${ymd(Date.now())}.json`,'application/json');});
 $('hImport').addEventListener('click',()=>$('importFile').click());
 $('importFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
   f.text().then(txt=>{let d;try{d=JSON.parse(txt);}catch(err){toast('ファイルを読み込めませんでした');return;}
     const inc=(Array.isArray(d)?d:d&&d.runs)||[];
     const ok=inc.filter(r=>r&&r.id!=null&&Array.isArray(r.laps)&&typeof r.ms==='number'&&typeof r.date==='number')
-      .map(r=>({id:r.id,date:r.date,ms:r.ms,laps:r.laps,lapDist:r.lapDist||400,firstDist:r.firstDist||0,gdist:r.gdist||0,pts:Array.isArray(r.pts)?r.pts:[]}));
+      .map(r=>Object.assign({id:r.id,date:r.date,ms:r.ms,laps:r.laps,lapDist:r.lapDist||400,firstDist:r.firstDist||0,gdist:r.gdist||0,pts:Array.isArray(r.pts)?r.pts:[]},
+        r.mode==='team'&&Array.isArray(r.athletes)?{mode:'team',athletes:r.athletes,target:r.target||0}:{}));
     let pf=0;const ip=d&&!Array.isArray(d)&&d.profile;
-    if(ip&&typeof ip==='object')['race','pb','schedule','notes'].forEach(k=>{if(!prof[k]&&typeof ip[k]==='string'&&ip[k]){prof[k]=ip[k];pf++;}});
-    if(pf){lsSet(PROF_KEY,prof);}
+    const fill=(dst,src)=>['race','pb','schedule','notes'].forEach(k=>{if(!dst[k]&&typeof src[k]==='string'&&src[k]){dst[k]=src[k];pf++;}});
+    if(ip&&typeof ip==='object')fill(profAll.self,ip);
+    if(d&&Array.isArray(d.roster))d.roster.forEach(r=>{if(r&&r.id&&typeof r.name==='string'&&!roster.some(x=>x.id===r.id)){roster.push({id:r.id,name:r.name.slice(0,20)});pf++;}});
+    if(d&&d.athProfiles&&typeof d.athProfiles==='object')Object.keys(d.athProfiles).forEach(id=>{const src=d.athProfiles[id];if(src&&typeof src==='object'){profAll.ath[id]=profAll.ath[id]||{race:'',pb:'',schedule:'',notes:'',runs:true};fill(profAll.ath[id],src);}});
+    if(pf){saveProf();lsSet(ROSTER_KEY,roster);if(mode==='team')renderTeam();}
     if(!ok.length){toast(pf?'AIコーチの前提を読み込みました':'このファイルには読み込める記録がありません');return;}
     const runs=loadRuns(),have=new Set(runs.map(r=>String(r.id)));let n=0;
     ok.forEach(r=>{if(!have.has(String(r.id))){runs.push(r);n++;}});
@@ -805,7 +865,7 @@ function act(name,t){if(name==='start')start(t);else if(name==='lap')doLap(t);el
   else if(name==='result'){const r=loadRuns().find(x=>x.id===S.runId);if(r)openResult(r);}}
 $('pad').addEventListener('pointerdown',e=>{const b=e.target.closest('[data-act]');if(!b)return;const t=Date.now();e.preventDefault();
   b.classList.add('pressed');setTimeout(()=>b.classList.remove('pressed'),110);act(b.dataset.act,t);});
-document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.repeat)return;if([...document.querySelectorAll('.sheet')].some(x=>!x.hidden))return;const t=Date.now();
+document.addEventListener('keydown',e=>{if(mode!=='athlete'||e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.repeat)return;if([...document.querySelectorAll('.sheet')].some(x=>!x.hidden))return;const t=Date.now();
   if(e.key===' '||e.key==='Enter'||e.key==='ArrowUp'||e.key==='AudioVolumeUp'){e.preventDefault();if(S.status==='running')doLap(t);else start(t);}
   else if(e.key==='Escape'||e.key==='ArrowDown'||e.key==='AudioVolumeDown'||e.key==='g'){if(S.status==='running'){e.preventDefault();goal(t);}}
 });
@@ -814,6 +874,158 @@ $('customDist').addEventListener('change',e=>{const v=Math.round(+e.target.value
 $('firstRow').addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;S.firstDist=+c.dataset.f;save();render();});
 $('soundBtn').addEventListener('click',()=>{S.sound=!S.sound;save();render();});
 $('gpsBtn').addEventListener('click',()=>{S.gps=!S.gps;save();if(S.gps){gState='wait';fix=null;}gpsStart();render();});
+
+/* coaching (team) mode: several athletes on one shared clock */
+const TEAM_KEY='lapwatch.team',ROSTER_KEY='lapwatch.roster',MODE_KEY='lapwatch.mode';
+const TCOLORS=['#B5432C','#1E7650','#2F5DA8','#7A4AA8','#A86A12','#1F7F86','#8A3B5C','#4D6B1F'];
+const TMAX=8,TMIN_LAP=5000,TTARGETS=[0,1500,3000,5000,10000];
+let mode=lsGet(MODE_KEY)==='team'?'team':'athlete';
+let roster=lsGet(ROSTER_KEY);if(!Array.isArray(roster))roster=[];
+let T=Object.assign({status:'idle',startAt:0,target:0,sel:[],ath:[],runId:null,lapDist:400,firstDist:0},lsGet(TEAM_KEY)||{});
+let tArm=null,tArmTimer=0,tEndArmed=0,tNewArmed=0,tEdit=false;
+function tSave(){lsSet(TEAM_KEY,T);}
+function setMode(m){mode=m;lsSet(MODE_KEY,m);$('app').className='app m-'+m;$('athleteView').hidden=m!=='athlete';$('teamView').hidden=m!=='team';
+  document.querySelectorAll('#modes [data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
+  if(m==='team'){renderTeam();if(T.status==='running')lockScreen();}else render();}
+function tCum(a){return a.laps.reduce((s,l)=>s+l.dist,0);}
+function tNextDist(a){const cum=tCum(a);let d=(a.laps.length===0&&T.firstDist)?T.firstDist:T.lapDist;
+  if(T.target&&cum+d>=T.target)d=T.target-cum;return {d,cum};}
+function tLap(id,t,forceGoal){
+  const a=T.ath.find(x=>x.id===id);if(!a||a.fin||T.status!=='running')return;
+  const e=t-T.startAt,prev=a.laps.length?a.laps[a.laps.length-1].split:0,ms=e-prev;
+  if(ms<TMIN_LAP){toast('前のラップから5秒以内のタップは数えません');return;}
+  const {d,cum}=tNextDist(a),goal=!!forceGoal||(T.target>0&&cum+d>=T.target);
+  a.laps.push({ms,split:e,dist:d,goal});
+  if(goal){a.fin=true;a.ms=e;feedback('goal');}else feedback('lap');
+  tSave();if(T.ath.every(x=>x.fin))tFinish();else renderTeam();
+}
+function tUndo(id){const a=T.ath.find(x=>x.id===id);if(!a||!a.laps.length)return;const l=a.laps.pop();
+  if(l.goal){a.fin=false;delete a.ms;}tSave();feedback('tap');toast(`${a.name}のラップを1つ取り消しました`);renderTeam();}
+function tStart(t){
+  const sel=T.sel.map(id=>roster.find(r=>r.id===id)).filter(Boolean);
+  if(!sel.length){toast('測る選手を選んでください');return;}
+  T.ath=sel.map((r,i)=>({id:r.id,name:r.name,color:TCOLORS[i%TCOLORS.length],laps:[],fin:false}));
+  Object.assign(T,{status:'running',startAt:t,runId:t,lapDist:S.lapDist,firstDist:S.firstDist});tArm=null;
+  tSave();feedback('start');lockScreen();renderTeam();
+}
+function tFinish(){
+  T.status='done';tArm=null;T.ath.forEach(a=>{if(!a.fin)a.ms=a.laps.length?a.laps[a.laps.length-1].split:0;});
+  tSave();if(S.status!=='running')unlockScreen();storeTeamRun();renderTeam();toast('測定を終えて、履歴に保存しました');
+}
+function storeTeamRun(){
+  const fins=T.ath.filter(a=>a.fin).map(a=>a.ms);
+  const run={id:T.runId,date:T.runId,mode:'team',ms:fins.length?Math.min(...fins):Math.max(0,...T.ath.map(a=>a.ms||0)),
+    lapDist:T.lapDist,firstDist:T.firstDist,target:T.target,
+    athletes:T.ath.map(a=>({id:a.id,name:a.name,laps:a.laps,fin:a.fin,ms:a.ms||0})),laps:[],gdist:0,pts:[]};
+  const runs=loadRuns().filter(r=>r.id!==run.id);runs.unshift(run);if(runs.length>MAXRUNS)runs.length=MAXRUNS;
+  if(!saveRuns(runs))toast('端末の保存容量が足りず、履歴に残せませんでした');return run;
+}
+function teamRank(ath){return ath.slice().sort((a,b)=>(b.fin-a.fin)||(a.fin?a.ms-b.ms:(b.laps.length-a.laps.length)||(a.ms-b.ms)));}
+function teamTable(run){
+  let rank=0;
+  return '<div class="tbl"><h3>結果</h3><table><thead><tr><th>選手</th><th>タイム</th><th>周</th><th>平均ラップ</th><th>最速</th></tr></thead><tbody>'+
+    teamRank(run.athletes).map(a=>{const full=a.laps.filter(l=>l.dist===run.lapDist),avg=full.length?full.reduce((s,l)=>s+l.ms,0)/full.length:0,best=full.length?Math.min(...full.map(l=>l.ms)):0;
+      return `<tr><td>${a.fin?(++rank)+'位':'途中'}<span class="m"> ${mdEsc(a.name)}</span></td><td>${fmtClock(a.ms||0)}</td><td>${a.laps.length}</td><td>${avg?fmtSec(avg):'—'}</td><td>${best?fmtSec(best):'—'}</td></tr>`;}).join('')+
+    '</tbody></table></div>';
+}
+function teamLapMatrix(run){
+  const max=Math.max(0,...run.athletes.map(a=>a.laps.length));if(!max)return '';
+  let h='<div class="tbl"><h3>ラップ（秒）</h3><table><thead><tr><th>周</th>'+run.athletes.map(a=>`<th>${mdEsc(a.name)}</th>`).join('')+'</tr></thead><tbody>';
+  for(let i=0;i<max;i++)h+=`<tr><td>${i+1}</td>`+run.athletes.map(a=>{const l=a.laps[i];return `<td>${l?fmtSec(l.ms).replace('秒','')+(l.goal?' G':''):''}</td>`;}).join('')+'</tr>';
+  return h+'</tbody></table></div>';
+}
+function teamText(run){
+  const L=['チーム測定 '+fmtDate(run.date)+(run.target?`　${run.target}m`:'')+`　1周 ${run.lapDist}m`];let rank=0;
+  teamRank(run.athletes).forEach(a=>{L.push(`${a.fin?(++rank)+'位':'途中'} ${a.name}  ${fmtClock(a.ms||0)}（${fmtSec(a.ms||0)}）`);
+    L.push('  ラップ: '+a.laps.map(l=>fmtSec(l.ms).replace('秒','')).join(', '));});
+  return L.join('\n');
+}
+function openTeamResult(run){
+  curRun=run;delArmed=0;$('rDel').textContent='この記録を削除';$('rDel').classList.remove('warn');
+  $('rTitle').innerHTML=`チーム測定<span class="sub">　${fmtDate(run.date)}</span>`;
+  $('rSum').innerHTML=`<div><dt>人数</dt><dd>${run.athletes.length}<small>人</small></dd></div>`+
+    `<div><dt>種目</dt><dd>${run.target?run.target+'<small>m</small>':'—'}</dd></div>`+
+    `<div><dt>1周</dt><dd>${run.lapDist}<small>m${run.firstDist?` · 1周目 ${run.firstDist}m`:''}</small></dd></div>`+
+    `<div><dt>1位のタイム</dt><dd>${run.athletes.some(a=>a.fin)?fmtClock(run.ms):'—'}</dd></div>`;
+  $('rMapWrap').hidden=true;$('rShare').hidden=true;$('rGpx').hidden=true;
+  $('rKm').innerHTML=teamTable(run);$('rLaps').innerHTML=teamLapMatrix(run);
+  closeSheet('history');openSheet('result');
+}
+function tArmSet(a){tArm=a;clearTimeout(tArmTimer);if(a)tArmTimer=setTimeout(()=>{tArm=null;renderTeam();},8000);renderTeam();}
+function tTileHtml(a){const n=a.laps.length,last=a.laps[n-1];
+  return `<button class="tile${a.fin?' fin':''}" data-ath="${a.id}"${a.fin?'':` style="background:${a.color}"`}>`+
+    `<span class="tn">${mdEsc(a.name)}</span><span class="tc">${a.fin?'GOAL':n+'周'}</span>`+
+    `<span class="tl">${last?fmtClock(last.ms):'—'}</span><span class="tls">${last?fmtSec(last.ms):''}</span>`+
+    `<span class="tsub"><span>${a.fin?'記録 '+fmtClock(a.ms):`現在 <b data-cur="${a.id}">0:00.0</b>`}</span><span>${tPredText(a)}</span></span></button>`;}
+function tPredText(a){const last=a.laps[a.laps.length-1];if(!last)return '';if(a.fin)return '';
+  const cum=tCum(a),pace=last.ms/last.dist;
+  if(T.target>cum)return `${T.target}m予測 ${fmtPace(last.split+(T.target-cum)*pace)}`;
+  return `${fmtPace(pace*1000)}/km`;}
+function renderTeam(){
+  const body=$('tBody'),bar=$('tBar');bar.className='tbar '+T.status;
+  if(T.status==='idle'){
+    body.innerHTML='<div class="tsetup"><h3>測る選手（最大'+TMAX+'人）</h3><div class="roster">'+
+      (roster.length?roster.map(r=>`<button class="chip" data-sel="${r.id}" aria-pressed="${T.sel.includes(r.id)}">${mdEsc(r.name)}${tEdit?'<span class="x">×</span>':''}</button>`).join(''):'<span class="note">まだ選手がいません。下で追加してください。</span>')+
+      '</div><div class="addrow"><input id="tName" maxlength="20" placeholder="選手の名前（ニックネーム・イニシャル推奨）"><button class="hbtn" id="tAdd">追加</button></div>'+
+      (roster.length?`<div class="row"><button class="chip" id="tEditBtn" aria-pressed="${tEdit}">${tEdit?'名簿の編集を終える':'名簿を編集（タップで削除）'}</button></div>`:'')+
+      '<h3>種目の距離（届いたら自動でゴール）</h3><div class="row">'+TTARGETS.map(v=>`<button class="chip" data-t="${v}" aria-pressed="${T.target===v}">${v?v+'m':'なし'}</button>`).join('')+
+      `<input class="custom num" id="tTargetCustom" type="number" inputmode="numeric" placeholder="任意 m" value="${TTARGETS.includes(T.target)?'':T.target}"></div>`+
+      `<p class="note">1周の距離（${S.lapDist}m${S.firstDist?`、1周目 ${S.firstDist}m`:''}）は上の「設定」で変えられます。全員同時にスタートし、選手のボタンを押すと、その選手のラップを記録します。選手の名前は「AIコーチ」に相談するときAIに送られるので、ニックネームやイニシャルがおすすめです。</p></div>`;
+    bar.innerHTML=`<button class="btn b-start" data-tact="start">全員スタート<small>${T.sel.length}人</small></button>`;
+  }else if(T.status==='running'){
+    body.innerHTML=`<div class="tiles${T.ath.length===1?' one':''}${tArm?' arm':''}">`+T.ath.map(tTileHtml).join('')+'</div>';
+    bar.innerHTML=`<button class="btn b-sub${tArm==='goal'?' on':''}" data-tact="goal">ゴール<small>→選手をタップ</small></button>`+
+      `<button class="btn b-sub${tArm==='undo'?' on':''}" data-tact="undo">1つ取消<small>→選手をタップ</small></button>`+
+      `<button class="btn b-sub${tEndArmed?' warn':''}" data-tact="end">${tEndArmed?'もう一度で<br>終了':'全員終了'}</button>`;
+  }else{
+    body.innerHTML=teamTable({athletes:T.ath,lapDist:T.lapDist})+teamLapMatrix({athletes:T.ath});
+    bar.innerHTML='<button class="btn b-sub" data-tact="view">記録を<br>見る</button><button class="btn b-sub" data-tact="copy">記録を<br>コピー</button>'+
+      `<button class="btn b-sub${tNewArmed?' warn':''}" data-tact="new">${tNewArmed?'もう一度で<br>新しい測定':'新しい<br>測定'}</button>`;
+  }
+  tickTeam();
+}
+function tickTeam(){
+  const now=Date.now(),e=T.status==='running'?now-T.startAt:T.status==='done'?Math.max(0,...T.ath.map(a=>a.ms||0)):0;
+  $('tTotal').textContent=fmtClock(e);
+  const st=$('tState');st.textContent=T.status==='running'?'計測中':T.status==='done'?'終了':'待機中';st.className='state'+(T.status==='running'?' run':'');
+  $('tInfo').textContent=tArm==='goal'?'ゴールした選手をタップ':tArm==='undo'?'取り消す選手をタップ':
+    [T.target?`種目 ${T.target}m`:'',T.status!=='idle'?`${T.ath.filter(a=>a.fin).length}/${T.ath.length}人 ゴール`:''].filter(Boolean).join('　');
+  if(T.status==='running')T.ath.forEach(a=>{const el=document.querySelector(`[data-cur="${a.id}"]`);if(el)el.textContent=fmtClock(e-(a.laps.length?a.laps[a.laps.length-1].split:0));});
+}
+function tAddName(){const inp=$('tName');const name=(inp&&inp.value||'').trim().slice(0,20);if(!name)return;
+  if(roster.some(r=>r.name===name)){toast('同じ名前の選手がいます');return;}
+  const r={id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name};roster.push(r);lsSet(ROSTER_KEY,roster);
+  if(T.sel.length<TMAX)T.sel.push(r.id);tSave();renderTeam();setTimeout(()=>{const i=$('tName');if(i)i.focus();},0);}
+function twoTap(key,act){ // returns true when the second tap lands within 3s
+  if(key==='end'){if(Date.now()-tEndArmed>3000){tEndArmed=Date.now();renderTeam();setTimeout(()=>{if(tEndArmed&&Date.now()-tEndArmed>=3000){tEndArmed=0;renderTeam();}},3050);return;}tEndArmed=0;act();}
+  else{if(Date.now()-tNewArmed>3000){tNewArmed=Date.now();renderTeam();setTimeout(()=>{if(tNewArmed&&Date.now()-tNewArmed>=3000){tNewArmed=0;renderTeam();}},3050);return;}tNewArmed=0;act();}
+}
+$('tBody').addEventListener('pointerdown',e=>{const b=e.target.closest('[data-ath]');if(!b||T.status!=='running')return;const t=Date.now();e.preventDefault();
+  b.classList.add('pressed');setTimeout(()=>b.classList.remove('pressed'),110);const id=b.dataset.ath;
+  if(tArm==='undo'){tArm=null;tUndo(id);}else if(tArm==='goal'){tArm=null;tLap(id,t,true);}else tLap(id,t,false);});
+$('tBody').addEventListener('click',e=>{
+  const s=e.target.closest('[data-sel]');
+  if(s){const id=s.dataset.sel;
+    if(tEdit){roster=roster.filter(r=>r.id!==id);T.sel=T.sel.filter(x=>x!==id);lsSet(ROSTER_KEY,roster);tSave();renderTeam();return;}
+    if(T.sel.includes(id))T.sel=T.sel.filter(x=>x!==id);else{if(T.sel.length>=TMAX){toast(`同時に測れるのは${TMAX}人までです`);return;}T.sel.push(id);}
+    tSave();renderTeam();return;}
+  if(e.target.closest('#tAdd')){tAddName();return;}
+  if(e.target.closest('#tEditBtn')){tEdit=!tEdit;renderTeam();return;}
+  const tg=e.target.closest('[data-t]');if(tg){T.target=+tg.dataset.t;tSave();renderTeam();}
+});
+$('tBody').addEventListener('change',e=>{if(e.target.id==='tTargetCustom'){const v=Math.round(+e.target.value);if(v>=100&&v<=100000){T.target=v;tSave();}renderTeam();}});
+$('tBody').addEventListener('keydown',e=>{if(e.target.id==='tName'&&e.key==='Enter'&&!e.isComposing&&e.keyCode!==229){e.preventDefault();tAddName();}});
+$('tBar').addEventListener('pointerdown',e=>{const b=e.target.closest('[data-tact]');if(!b)return;const t=Date.now();e.preventDefault();
+  b.classList.add('pressed');setTimeout(()=>b.classList.remove('pressed'),110);const a=b.dataset.tact;
+  if(a==='start')tStart(t);
+  else if(a==='goal')tArmSet(tArm==='goal'?null:'goal');
+  else if(a==='undo')tArmSet(tArm==='undo'?null:'undo');
+  else if(a==='end')twoTap('end',tFinish);
+  else if(a==='new')twoTap('new',()=>{T.status='idle';T.ath=[];T.runId=null;tSave();renderTeam();});
+  else if(a==='view'){const r=loadRuns().find(x=>x.id===T.runId);if(r)openResult(r);else toast('この記録は履歴から削除されています');}
+  else if(a==='copy')copyText(teamText({date:T.runId,athletes:T.ath,target:T.target,lapDist:T.lapDist}));
+});
+$('modes').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b&&b.dataset.mode!==mode)setMode(b.dataset.mode);});
 
 /* #demo: synthetic 400m-track run for checking the result screen (not saved) */
 function demoRun(){
@@ -848,22 +1060,41 @@ const COACH_SYSTEM=`あなたは陸上長距離・ロードランニングに詳
 const CONV_KEY='lapwatch.coach',PROF_KEY='lapwatch.profile',APIKEY_KEY='lapwatch.apikey';
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
-let prof=Object.assign({race:'',pb:'',schedule:'',notes:'',runs:true},lsGet(PROF_KEY)||{});
-let conv=lsGet(CONV_KEY);if(!conv||!Array.isArray(conv.messages))conv={ctx:'',messages:[]};
+const PDEF={race:'',pb:'',schedule:'',notes:'',runs:true};
+let profAll=lsGet(PROF_KEY)||{};
+if(!profAll.self)profAll={self:Object.assign({},PDEF,profAll),ath:{}}; // migrate the single-profile format
+if(!profAll.ath)profAll.ath={};
+let coachWho=lsGet('lapwatch.coachWho')||'self';
+if(coachWho!=='self'&&!roster.some(r=>r.id===coachWho))coachWho='self';
+function curProf(){if(coachWho==='self')return profAll.self;return profAll.ath[coachWho]||(profAll.ath[coachWho]=Object.assign({},PDEF));}
+function saveProf(){lsSet(PROF_KEY,profAll);}
+function whoName(){if(coachWho==='self')return '自分';const r=roster.find(x=>x.id===coachWho);return r?r.name:'選手';}
+function convKey(){return coachWho==='self'?CONV_KEY:CONV_KEY+'.'+coachWho;}
+let conv=null;
+function loadConv(){const c=lsGet(convKey());conv=(c&&Array.isArray(c.messages))?c:{ctx:'',messages:[]};}
+loadConv();
 let apiKey='';try{apiKey=localStorage.getItem(APIKEY_KEY)||'';}catch(e){}
 let sdkP=null,coachStream=null,coachBusy=false,newArmed=0;
 function loadSdk(){return sdkP||(sdkP=import(SDK_URL).then(m=>m.default).catch(err=>{sdkP=null;throw err;}));}
-function saveConv(){if(!lsSet(CONV_KEY,conv))toast('端末の保存容量が足りません。「新しい相談」で会話を整理してください');}
+function saveConv(){if(!lsSet(convKey(),conv))toast('端末の保存容量が足りません。「新しい相談」で会話を整理してください');}
 
 function buildCoachContext(){
   const d=new Date(),wd='日月火水木金土'[d.getDay()];
+  const prof=curProf(),self=coachWho==='self';
   const L=[`今日の日付: ${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`];
+  L.push(self?'相談の対象: 相談者自身の練習':`相談の対象: 相談者が指導している選手「${whoName()}」の練習`);
   L.push('目標レース: '+(prof.race||'（未入力）'));
   L.push('自己ベスト・最近のレース: '+(prof.pb||'（未入力）'));
   L.push('練習できる日・時間: '+(prof.schedule||'（未入力）'));
   if(prof.notes)L.push('ケガ・体調・その他: '+prof.notes);
-  if(prof.runs){
-    const runs=loadRuns().slice(0,15);
+  if(prof.runs&&!self){
+    const runs=loadRuns().filter(r=>r.mode==='team'&&r.athletes.some(a=>a.id===coachWho)).slice(0,15);
+    if(runs.length){L.push('','コーチングモードで測ったこの選手の記録（新しい順）:');
+      runs.forEach(r=>{const a=r.athletes.find(x=>x.id===coachWho);
+        L.push(`- ${fmtDate(r.date)}　${r.target?r.target+'m':'距離の指定なし'}（1周${r.lapDist}m${r.firstDist?`、1周目${r.firstDist}m`:''}、${r.athletes.length}人で測定）　${a.fin?'記録 '+fmtClock(a.ms):'途中まで '+fmtClock(a.ms||0)}　ラップ: `+a.laps.slice(0,40).map(l=>fmtSec(l.ms).replace('秒','')).join(', '));});
+    }else L.push('','この選手の測定記録はまだありません。');
+  }else if(prof.runs){
+    const runs=loadRuns().filter(r=>r.mode!=='team').slice(0,15);
     if(runs.length){L.push('','このアプリに保存されている最近の練習記録（新しい順）:');
       runs.forEach(r=>{const ls=r.laps.reduce((a,l)=>a+l.dist,0);
         const dist=[ls?`ラップ設定 ${fmtKm(ls)}km`:'',r.gdist>0?`GPS ${fmtKm(r.gdist)}km`:''].filter(Boolean).join(' / ')||'距離不明';
@@ -918,9 +1149,11 @@ function renderChat(){
 }
 function mdEsc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function renderCoachSettings(){
+  const prof=curProf();
+  $('cWho').innerHTML='<span>相談する人</span>'+[{id:'self',name:'自分'}].concat(roster).map(r=>`<button class="chip" data-who="${r.id}" aria-pressed="${coachWho===r.id}">${mdEsc(r.name)}</button>`).join('');
   $('pRace').value=prof.race;$('pPb').value=prof.pb;$('pSchedule').value=prof.schedule;$('pNotes').value=prof.notes;$('pKey').value=apiKey;
   $('cRuns').textContent=prof.runs?'AIに伝える':'伝えない';$('cRuns').setAttribute('aria-pressed',prof.runs);
-  $('cSetSum').textContent=!apiKey?'APIキー未設定':(prof.race||'目標レース未入力');
+  $('cSetSum').textContent=!apiKey?'APIキー未設定':whoName()+'　'+(prof.race||'目標レース未入力');
 }
 function setCoachBusy(b){coachBusy=b;$('cSend').textContent=b?'停止':'送信';}
 function coachError(text){const d=document.createElement('div');d.className='msg err';d.textContent=text;$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;}
@@ -962,7 +1195,7 @@ async function coachSend(text){
   }finally{coachStream=null;setCoachBusy(false);}
 }
 function autoGrow(){const t=$('cInput');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,window.innerHeight*.3)+'px';}
-function openCoach(){renderCoachSettings();renderChat();if(!apiKey)$('cSet').open=true;openSheet('coach');}
+function openCoach(){if(coachWho!=='self'&&!roster.some(r=>r.id===coachWho)){coachWho='self';loadConv();}renderCoachSettings();renderChat();if(!apiKey)$('cSet').open=true;openSheet('coach');}
 $('coachBtn').addEventListener('click',openCoach);
 $('cForm').addEventListener('submit',e=>{e.preventDefault();if(coachBusy){coachStream&&coachStream.abort();return;}coachSend($('cInput').value);});
 $('cInput').addEventListener('input',autoGrow);
@@ -971,8 +1204,10 @@ if(desktopKeys)$('cInput').placeholder='相談したいことを書いてくだ�
 $('cInput').addEventListener('keydown',e=>{if(!desktopKeys||e.key!=='Enter'||e.shiftKey||e.isComposing||e.keyCode===229)return;e.preventDefault();if(!coachBusy)coachSend($('cInput').value);});
 $('quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b)coachSend(b.dataset.q);});
 $('chat').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;copyText(msgText(conv.messages[+b.dataset.copy]));});
-[['pRace','race'],['pPb','pb'],['pSchedule','schedule'],['pNotes','notes']].forEach(([id,k])=>$(id).addEventListener('input',e=>{prof[k]=e.target.value;lsSet(PROF_KEY,prof);$('cSetSum').textContent=!apiKey?'APIキー未設定':(prof.race||'目標レース未入力');}));
-$('cRuns').addEventListener('click',()=>{prof.runs=!prof.runs;lsSet(PROF_KEY,prof);renderCoachSettings();});
+[['pRace','race'],['pPb','pb'],['pSchedule','schedule'],['pNotes','notes']].forEach(([id,k])=>$(id).addEventListener('input',e=>{const prof=curProf();prof[k]=e.target.value;saveProf();$('cSetSum').textContent=!apiKey?'APIキー未設定':whoName()+'　'+(prof.race||'目標レース未入力');}));
+$('cRuns').addEventListener('click',()=>{const prof=curProf();prof.runs=!prof.runs;saveProf();renderCoachSettings();});
+$('cWho').addEventListener('click',e=>{const b=e.target.closest('[data-who]');if(!b||coachBusy||b.dataset.who===coachWho)return;
+  coachWho=b.dataset.who;lsSet('lapwatch.coachWho',coachWho);loadConv();renderCoachSettings();renderChat();});
 $('pKey').addEventListener('change',e=>{apiKey=e.target.value.trim();try{apiKey?localStorage.setItem(APIKEY_KEY,apiKey):localStorage.removeItem(APIKEY_KEY);}catch(err){}renderCoachSettings();renderChat();if(apiKey)toast('APIキーを保存しました');});
 $('cNew').addEventListener('click',()=>{if(coachBusy)return;
   if(!conv.messages.length){conv={ctx:'',messages:[]};saveConv();renderChat();return;}
@@ -980,13 +1215,14 @@ $('cNew').addEventListener('click',()=>{if(coachBusy)return;
   newArmed=0;$('cNew').textContent='新しい相談';conv={ctx:'',messages:[]};saveConv();renderChat();toast('新しい相談を始めます');});
 
 $('updateBtn').addEventListener('click',()=>{
-  if(S.status==='running'){toast('計測中は更新できません。ゴール後に押してください');return;}
+  if(S.status==='running'||T.status==='running'){toast('計測中は更新できません。ゴール後に押してください');return;}
   toast('最新版を確認しています…');save();
   fetch(location.pathname,{cache:'reload'}).catch(()=>{}).then(()=>{location.reload();});
 });
 if(S.status==='running')lockScreen();
 gpsStart();
 render();
+setMode(mode);
 if(location.hash==='#demo')openResult(demoRun());
 if(location.hash==='#coach')openCoach();
 })();
