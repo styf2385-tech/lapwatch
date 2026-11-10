@@ -262,7 +262,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
         </div>
         <div class="row"><span>GPS記録</span><button class="chip" id="gpsBtn">オン</button></div>
         <div class="row"><span>操作音</span><button class="chip" id="soundBtn">オン</button></div>
-        <div class="row"><span>版</span><b class="num" id="appVer">2026.11.09</b><button class="chip" id="updateBtn">最新版に更新</button></div>
+        <div class="row"><span>版</span><b class="num" id="appVer">2026.11.11</b><button class="chip" id="updateBtn">最新版に更新</button></div>
       </div>
     </details>
     <button class="hbtn" id="histBtn">履歴</button>
@@ -365,7 +365,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
         <label>いまの自己ベスト・最近のレース<input id="pPb" placeholder="例：5000m 16:58（2026年9月）"></label>
         <label>練習できる日・時間<input id="pSchedule" placeholder="例：平日は朝60分、土日はポイント練習"></label>
         <label>ケガ・体調・その他<textarea id="pNotes" rows="2" placeholder="例：右アキレス腱に違和感が出やすい"></textarea></label>
-        <div class="row"><span>練習記録</span><button class="chip" id="cRuns">AIに伝える</button></div>
+        <div class="row"><span>練習記録</span><button class="chip" id="cRuns">AIに伝える</button><span class="note" id="cRunCount"></span></div>
         <label>Anthropic APIキー（この端末の中だけに保存）<input id="pKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="sk-ant-..."></label>
         <p class="note">ここで書いた前提と、保存されている最近の練習記録（最大15件）を、相談のたびにAIへ伝えます。前提を変えたら「新しい相談」を押すと反映されます。APIキーはこの端末の中にだけ保存され、相談するときにAnthropicへ直接送られます。</p>
       </div>
@@ -1078,10 +1078,10 @@ let sdkP=null,coachStream=null,coachBusy=false,newArmed=0;
 function loadSdk(){return sdkP||(sdkP=import(SDK_URL).then(m=>m.default).catch(err=>{sdkP=null;throw err;}));}
 function saveConv(){if(!lsSet(convKey(),conv))toast('端末の保存容量が足りません。「新しい相談」で会話を整理してください');}
 
+function todayLine(){const d=new Date(),wd='日月火水木金土'[d.getDay()];return `今日の日付: ${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`;}
 function buildCoachContext(){
-  const d=new Date(),wd='日月火水木金土'[d.getDay()];
   const prof=curProf(),self=coachWho==='self';
-  const L=[`今日の日付: ${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`];
+  const L=[];
   L.push(self?'相談の対象: 相談者自身の練習':`相談の対象: 相談者が指導している選手「${whoName()}」の練習`);
   L.push('目標レース: '+(prof.race||'（未入力）'));
   L.push('自己ベスト・最近のレース: '+(prof.pb||'（未入力）'));
@@ -1098,7 +1098,7 @@ function buildCoachContext(){
     if(runs.length){L.push('','このアプリに保存されている最近の練習記録（新しい順）:');
       runs.forEach(r=>{const ls=r.laps.reduce((a,l)=>a+l.dist,0);
         const dist=[ls?`ラップ設定 ${fmtKm(ls)}km`:'',r.gdist>0?`GPS ${fmtKm(r.gdist)}km`:''].filter(Boolean).join(' / ')||'距離不明';
-        const base=ls||r.gdist;
+        const base=ls&&(!r.gdist||ls>=r.gdist*.8)?ls:(r.gdist||ls); // laps pressed only partway: trust GPS distance
         let line=`- ${fmtDate(r.date)}　タイム ${fmtClock(r.ms)}　距離 ${dist}`+(base?`　平均 ${fmtPace(r.ms/base*1000)}/km`:'');
         if(r.laps.length)line+=`　ラップ（1周${r.lapDist}m）: `+r.laps.slice(0,40).map(l=>fmtSec(l.ms).replace('秒','')).join(', ')+(r.laps.length>40?' …':'');
         L.push(line);});
@@ -1143,7 +1143,7 @@ function renderChat(){
   if(!apiKey)h+=coachSetupHtml();
   if(!conv.messages.length)h+='<div class="msg bot"><p>レースに向けた練習計画やメニューの相談にのります。上の「相談の前提」に目標レースや自己ベストを入れておくと、それをもとに考えます。保存されている練習記録も参考にします。</p><p>下のボタンから始めるか、自由に書いてください。</p></div>';
   conv.messages.forEach((m,i)=>{
-    if(m.role==='user')h+=`<div class="msg user">${mdEsc(msgText(m))}</div>`;
+    if(m.role==='user')h+=`<div class="msg user">${mdEsc(typeof m.content==='string'?m.content:((m.content[m.content.length-1]||{}).text||''))}</div>`;
     else h+=`<div class="msg bot">${mdToHtml(msgText(m))}<div class="mfoot"><button data-copy="${i}">コピー</button></div></div>`;});
   el.innerHTML=h;el.scrollTop=el.scrollHeight;
 }
@@ -1152,6 +1152,8 @@ function renderCoachSettings(){
   const prof=curProf();
   $('cWho').innerHTML='<span>相談する人</span>'+[{id:'self',name:'自分'}].concat(roster).map(r=>`<button class="chip" data-who="${r.id}" aria-pressed="${coachWho===r.id}">${mdEsc(r.name)}</button>`).join('');
   $('pRace').value=prof.race;$('pPb').value=prof.pb;$('pSchedule').value=prof.schedule;$('pNotes').value=prof.notes;$('pKey').value=apiKey;
+  const all=loadRuns(),n=coachWho==='self'?all.filter(r=>r.mode!=='team').length:all.filter(r=>r.mode==='team'&&r.athletes.some(a=>a.id===coachWho)).length;
+  $('cRunCount').textContent=`この端末の記録 ${Math.min(n,15)}件${n>15?`（最新15件／全${n}件）`:''}`;
   $('cRuns').textContent=prof.runs?'AIに伝える':'伝えない';$('cRuns').setAttribute('aria-pressed',prof.runs);
   $('cSetSum').textContent=!apiKey?'APIキー未設定':whoName()+'　'+(prof.race||'目標レース未入力');
 }
@@ -1161,8 +1163,11 @@ function coachError(text){const d=document.createElement('div');d.className='msg
 async function coachSend(text){
   text=text.trim();if(!text||coachBusy)return;
   if(!apiKey){$('cSet').open=true;renderChat();toast('先にAPIキーを設定してください');$('pKey').focus();return;}
-  if(!conv.messages.length)conv.ctx=buildCoachContext(); // fixed for the whole conversation
-  conv.messages.push({role:'user',content:text});saveConv();renderChat();$('cInput').value='';autoGrow();
+  const body=buildCoachContext(),prevSent=conv.sent,changed=prevSent!==body;
+  const info='<最新の情報>\n'+todayLine()+'\nこれはこのメッセージを送った時点の正しい日付と情報です。前のメッセージや<相談者の情報>と食い違うときは、こちらを優先してください。\n'+
+    (changed?body:'（相談者の前提と練習記録は、前回伝えた内容から変わっていません）')+'\n</最新の情報>';
+  conv.sent=body;
+  conv.messages.push({role:'user',content:[{type:'text',text:info},{type:'text',text}]});saveConv();renderChat();$('cInput').value='';autoGrow();
   const bubble=document.createElement('div');bubble.className='msg bot wait';$('chat').appendChild(bubble);$('chat').scrollTop=$('chat').scrollHeight;
   setCoachBusy(true);let acc='';let Anthropic=null;
   try{
@@ -1172,16 +1177,16 @@ async function coachSend(text){
       model:COACH_MODEL,max_tokens:16000,
       output_config:{effort:'medium'},
       betas:['server-side-fallback-2026-07-01'],fallbacks:'default',
-      system:[{type:'text',text:COACH_SYSTEM,cache_control:{type:'ephemeral'}},{type:'text',text:conv.ctx}],
+      system:[{type:'text',text:COACH_SYSTEM,cache_control:{type:'ephemeral'}}].concat(conv.ctx?[{type:'text',text:conv.ctx}]:[]), // ctx: conversations started before 2026.11.11
       messages:conv.messages});
     coachStream.on('text',t=>{acc+=t;bubble.classList.remove('wait');bubble.innerHTML=mdToHtml(acc);const c=$('chat');if(c.scrollHeight-c.scrollTop-c.clientHeight<160)c.scrollTop=c.scrollHeight;});
     const msg=await coachStream.finalMessage();
-    if(msg.stop_reason==='refusal'){conv.messages.pop();saveConv();renderChat();$('cInput').value=text;
+    if(msg.stop_reason==='refusal'){conv.messages.pop();conv.sent=prevSent;saveConv();renderChat();$('cInput').value=text;
       coachError('この内容には答えられませんでした。聞き方を変えて、もう一度試してください。');}
     else{conv.messages.push({role:'assistant',content:msg.content});saveConv();renderChat();
       if(msg.stop_reason==='max_tokens')coachError('答えが長すぎて途中で切れました。「続きを書いて」と送ると続きを書きます。');}
   }catch(err){
-    conv.messages.pop();saveConv();renderChat();$('cInput').value=text;autoGrow();
+    conv.messages.pop();conv.sent=prevSent;saveConv();renderChat();$('cInput').value=text;autoGrow();
     let m='うまく送れませんでした。時間をおいて、もう一度送ってください。';
     if(!Anthropic)m='AIの読み込みに失敗しました。電波の届く場所で、もう一度送ってください。';
     else if(err instanceof Anthropic.APIUserAbortError)m='途中で止めました。';
